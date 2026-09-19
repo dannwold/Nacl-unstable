@@ -26,9 +26,15 @@
 
 #include <android/looper.h>
 
+typedef const ASensor* ASensorConst;
+
+int ASensorEventQueue_getFd(ASensorEventQueue* queue);
+
 #else
 
 #include "sensor_ipc_common.h"
+
+typedef const void* ASensorConst;
 
 #endif
 
@@ -532,7 +538,7 @@ int main(int argc, char *argv[]) {
 
                         out_event.z = raw_event.acceleration.z;
 
-                        out_event.accuracy = (float)raw_event.status;
+                        out_event.accuracy = 0.0f;
 
 
 

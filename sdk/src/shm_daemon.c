@@ -17,7 +17,7 @@
 #include <sys/un.h>
 
 #include <sys/ioctl.h>
-
+#include <sys/stat.h>
 #include <errno.h>
 
 #include <time.h>

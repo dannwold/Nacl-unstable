@@ -57,6 +57,10 @@ jobs:
           echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
           echo "NDK_TOOLCHAIN=$NDK_PATH/build/cmake/android.toolchain.cmake" >> $GITHUB_ENV
 
+      - name: Clean Previous Build Directories
+        run: |
+          rm -rf build_* || true
+
       - name: Compile Native C/C++ Shared Libraries (.so)
         run: |
           echo "Compiling native libraries for ABI: ${{ matrix.abi }}"
@@ -67,7 +71,9 @@ jobs:
             -DANDROID_ABI="${{ matrix.abi }}" \
             -DANDROID_PLATFORM=android-26 \
             -DANDROID_STL=c++_shared \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-D_GNU_SOURCE -D__ANDROID_API__=26" \
+            -DCMAKE_CXX_FLAGS="-D_GNU_SOURCE -D__ANDROID_API__=26"
             
           cmake --build build_${{ matrix.abi }} --config Release -j$(nproc)
 

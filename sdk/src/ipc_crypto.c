@@ -65,44 +65,26 @@ int ipc_crypto_init(LibCryptoBridge *bridge) {
 
 
     // Resolve required system cryptographic symbols dynamically
-
-    #define RESOLVE_SYM(name) \
-
-        bridge->name = dlsym(bridge->lib_handle, #name); \
-
-        if (!bridge->name) { \
-
-            fprintf(stderr, "[IPC Crypto] Symbol not found: %s\n", #name); \
-
+    #define RESOLVE_SYM(sym_fn) \
+        bridge->sym_fn = dlsym(bridge->lib_handle, #sym_fn); \
+        if (!bridge->sym_fn) { \
+            fprintf(stderr, "[IPC Crypto] Symbol not found: %s\n", #sym_fn); \
             dlclose(bridge->lib_handle); \
-
             return -2; \
-
         }
 
-
-
     RESOLVE_SYM(EVP_CIPHER_CTX_new);
-
     RESOLVE_SYM(EVP_CIPHER_CTX_free);
-
     RESOLVE_SYM(EVP_aes_256_gcm);
-
     RESOLVE_SYM(EVP_EncryptInit_ex);
-
     RESOLVE_SYM(EVP_EncryptUpdate);
-
     RESOLVE_SYM(EVP_EncryptFinal_ex);
-
     RESOLVE_SYM(EVP_DecryptInit_ex);
-
     RESOLVE_SYM(EVP_DecryptUpdate);
-
     RESOLVE_SYM(EVP_DecryptFinal_ex);
-
     RESOLVE_SYM(EVP_CIPHER_CTX_ctrl);
-
     RESOLVE_SYM(RAND_bytes);
+    #undef RESOLVE_SYM
 
 
 
@@ -202,7 +184,7 @@ int ipc_crypto_encrypt(LibCryptoBridge *bridge,
 
     // 5. Encrypt raw plaintext bytes
 
-    if (bridge->EVP_EVP_EncryptUpdate != NULL) { // redundant safety check
+    if (bridge->EVP_EncryptUpdate != NULL) { // redundant safety check
 
         // fallback
 
