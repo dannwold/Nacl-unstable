@@ -17,6 +17,7 @@ include_directories(include)
 # Standard Android system libraries to link against
 find_library(log-lib log)
 find_library(android-lib android)
+find_library(sensor-lib sensor)
 find_library(dl-lib dl)
 find_library(egl-lib EGL)
 find_library(gles3-lib GLESv3)
@@ -31,6 +32,9 @@ endif()
 if(NOT gles3-lib)
     set(gles3-lib "")
 endif()
+if(NOT sensor-lib)
+    set(sensor-lib android)
+endif()
 
 # 1. Core Coordinator & JNI Bridge
 add_library(android_core SHARED
@@ -44,7 +48,7 @@ add_library(sensors_client SHARED src/sensors_client.c)
 target_link_libraries(sensors_client ${log-lib})
 
 add_executable(sensors_daemon src/sensors_daemon.c)
-target_link_libraries(sensors_daemon ${log-lib} ${android-lib})
+target_link_libraries(sensors_daemon ${log-lib} ${android-lib} ${sensor-lib})
 
 # 3. Telephony Subsystem
 add_library(telephony_client SHARED src/telephony_client.c)

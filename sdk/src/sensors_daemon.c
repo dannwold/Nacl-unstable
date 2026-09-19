@@ -26,9 +26,25 @@
 
 #include <android/looper.h>
 
+#include <dlfcn.h>
+
 typedef const ASensor* ASensorConst;
 
-int ASensorEventQueue_getFd(ASensorEventQueue* queue);
+typedef int (*pfn_ASensorEventQueue_getFd)(ASensorEventQueue* queue);
+static pfn_ASensorEventQueue_getFd g_ASensorEventQueue_getFd_fn = NULL;
+
+static int resolve_sensor_fd(ASensorEventQueue* queue) {
+    if (!g_ASensorEventQueue_getFd_fn) {
+        void* handle = dlopen("libandroid.so", RTLD_NOW | RTLD_GLOBAL);
+        if (handle) {
+            g_ASensorEventQueue_getFd_fn = (pfn_ASensorEventQueue_getFd)dlsym(handle, "ASensorEventQueue_getFd");
+        }
+    }
+    if (g_ASensorEventQueue_getFd_fn) {
+        return g_ASensorEventQueue_getFd_fn(queue);
+    }
+    return -1;
+}
 
 #else
 
@@ -344,7 +360,7 @@ int main(int argc, char *argv[]) {
 
     // Capture queue file descriptor (Available starting on API level 21) [23]
 
-    int sensor_fd = ASensorEventQueue_getFd(sensor_queue);
+    int sensor_fd = resolve_sensor_fd(sensor_queue);
 
     if (sensor_fd < 0) {
 
