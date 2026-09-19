@@ -30,54 +30,46 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Locate Android NDK
-        id: setup-ndk
+      - name: Configure Android NDK
         run: |
-          echo "=== Detecting Android NDK ==="
-          FOUND_NDK=""
+          echo "=== Setting up Android NDK ==="
+          NDK_PATH=""
           
-          if [ -n "$ANDROID_NDK_LATEST_HOME" ] && [ -d "$ANDROID_NDK_LATEST_HOME" ]; then
-            FOUND_NDK="$ANDROID_NDK_LATEST_HOME"
-          elif [ -n "$ANDROID_NDK_HOME" ] && [ -d "$ANDROID_NDK_HOME" ]; then
-            FOUND_NDK="$ANDROID_NDK_HOME"
-          elif [ -n "$ANDROID_NDK_ROOT" ] && [ -d "$ANDROID_NDK_ROOT" ]; then
-            FOUND_NDK="$ANDROID_NDK_ROOT"
-          elif [ -d "$ANDROID_HOME/ndk" ]; then
-            FOUND_NDK=$(find "$ANDROID_HOME/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          if [ -n "$ANDROID_NDK_LATEST_HOME" ] && [ -f "$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" ]; then
+            NDK_PATH="$ANDROID_NDK_LATEST_HOME"
+          elif [ -n "$ANDROID_NDK_HOME" ] && [ -f "$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" ]; then
+            NDK_PATH="$ANDROID_NDK_HOME"
           elif [ -d "/usr/local/lib/android/sdk/ndk" ]; then
-            FOUND_NDK=$(find "/usr/local/lib/android/sdk/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+            NDK_PATH=$(find "/usr/local/lib/android/sdk/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
           fi
-          
-          if [ -z "$FOUND_NDK" ] || [ ! -f "$FOUND_NDK/build/cmake/android.toolchain.cmake" ]; then
-            echo "NDK toolchain not found in standard paths. Installing via sdkmanager..."
-            SDKM=$(find $ANDROID_HOME -name sdkmanager 2>/dev/null | head -n 1)
-            if [ -n "$SDKM" ]; then
+
+          if [ -z "$NDK_PATH" ] || [ ! -f "$NDK_PATH/build/cmake/android.toolchain.cmake" ]; then
+            echo "Installing NDK via sdkmanager..."
+            SDKM="/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
+            if [ -f "$SDKM" ]; then
               yes | $SDKM --licenses || true
-              $SDKM "ndk-bundle" "cmake;3.22.1" || true
-              FOUND_NDK="$ANDROID_HOME/ndk-bundle"
+              $SDKM "ndk;25.2.9519653" "cmake;3.22.1" || true
+              NDK_PATH="/usr/local/lib/android/sdk/ndk/25.2.9519653"
             fi
           fi
 
-          echo "Resolved NDK Path: $FOUND_NDK"
-          echo "ANDROID_NDK_HOME=$FOUND_NDK" >> $GITHUB_ENV
-          echo "NDK_TOOLCHAIN=$FOUND_NDK/build/cmake/android.toolchain.cmake" >> $GITHUB_ENV
+          echo "Detected NDK Path: $NDK_PATH"
+          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+          echo "NDK_TOOLCHAIN=$NDK_PATH/build/cmake/android.toolchain.cmake" >> $GITHUB_ENV
 
       - name: Compile Native C/C++ Shared Libraries (.so)
         run: |
           echo "Compiling native libraries for ABI: ${{ matrix.abi }}"
-          echo "Using NDK Toolchain: $NDK_TOOLCHAIN"
+          echo "Using toolchain: $NDK_TOOLCHAIN"
           
-          mkdir -p build_${{ matrix.abi }}
-          cd build_${{ matrix.abi }}
-          
-          cmake -S ../sdk -B . \
+          cmake -S sdk -B build_${{ matrix.abi }} \
             -DCMAKE_TOOLCHAIN_FILE="$NDK_TOOLCHAIN" \
             -DANDROID_ABI="${{ matrix.abi }}" \
             -DANDROID_PLATFORM=android-21 \
             -DANDROID_STL=c++_shared \
             -DCMAKE_BUILD_TYPE=Release
             
-          cmake --build . --config Release -j$(nproc)
+          cmake --build build_${{ matrix.abi }} --config Release -j$(nproc)
 
       - name: Stage ABI Artifacts
         run: |

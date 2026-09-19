@@ -18,6 +18,9 @@ include_directories(include)
 find_library(log-lib log)
 find_library(android-lib android)
 find_library(dl-lib dl)
+find_library(egl-lib EGL)
+find_library(gles3-lib GLESv3)
+find_library(vulkan-lib vulkan)
 
 # 1. Core Coordinator & JNI Bridge
 add_library(android_core SHARED
@@ -57,7 +60,7 @@ target_link_libraries(shm_daemon ${log-lib})
 
 # 7. Vulkan Rendering Layer & Display Bridges
 add_library(vulkan_renderer SHARED src/vulkan_renderer.c src/display.cpp)
-target_link_libraries(vulkan_renderer ${log-lib} ${android-lib})
+target_link_libraries(vulkan_renderer ${log-lib} ${android-lib} ${egl-lib} ${gles3-lib} ${vulkan-lib})
 
 add_library(display_jni_bridge SHARED src/display_jni_bridge.cpp)
 target_link_libraries(display_jni_bridge ${log-lib} ${android-lib})
