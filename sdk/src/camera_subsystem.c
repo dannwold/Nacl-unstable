@@ -4,6 +4,10 @@
 
 #include <android/log.h>
 
+#include <camera/NdkCameraManager.h>
+
+#include <media/NdkImageReader.h>
+
 #include "camera_subsystem.h"
 
 

@@ -47,7 +47,7 @@ jobs:
             echo "Installing NDK via sdkmanager..."
             SDKM="/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
             if [ -f "$SDKM" ]; then
-              yes | $SDKM --licenses || true
+              yes | $SDKM --licenses
               $SDKM "ndk;25.2.9519653" "cmake;3.22.1"
               NDK_PATH="/usr/local/lib/android/sdk/ndk/25.2.9519653"
             fi
