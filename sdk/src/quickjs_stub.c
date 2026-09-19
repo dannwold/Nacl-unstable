@@ -86,5 +86,4 @@ WEAK_STUB int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m, const JSCFu
 WEAK_STUB JSValue JS_GetGlobalObject(JSContext *ctx) { (void)ctx; return JS_UNDEFINED; }
 WEAK_STUB JSValue JS_Call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv) { (void)ctx; (void)func_obj; (void)this_obj; (void)argc; (void)argv; return JS_UNDEFINED; }
 WEAK_STUB JSValue JS_DupValue(JSContext *ctx, JSValueConst v) { (void)ctx; return v; }
-WEAK_STUB JSValue JS_CFUNC_constructor(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) { (void)ctx; (void)this_val; (void)argc; (void)argv; return JS_UNDEFINED; }
 WEAK_STUB JSValue JS_NewCFunction2(JSContext *ctx, JSCFunction *func, const char *name, int length, int cproto, int magic) { (void)ctx; (void)func; (void)name; (void)length; (void)cproto; (void)magic; return JS_UNDEFINED; }

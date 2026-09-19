@@ -72,11 +72,25 @@ target_link_libraries(shm_client ${log-lib})
 add_executable(shm_daemon src/shm_daemon.c)
 target_link_libraries(shm_daemon ${log-lib})
 
-add_library(vulkan_renderer SHARED src/vulkan_renderer.c src/display.cpp)
-target_link_libraries(vulkan_renderer ${log-lib} ${android-lib} ${egl-lib} ${gles3-lib} ${vulkan-lib})
+add_library(display_core SHARED src/display.cpp)
+
+target_link_libraries(display_core
+    ${log-lib}
+    ${android-lib}
+    ${egl-lib}
+    ${gles3-lib}
+)
+
+add_library(vulkan_renderer SHARED src/vulkan_renderer.c)
+target_link_libraries(vulkan_renderer ${log-lib} ${android-lib} ${egl-lib} ${gles3-lib} ${vulkan-lib} display_core)
 
 add_library(display_jni_bridge SHARED src/display_jni_bridge.cpp)
-target_link_libraries(display_jni_bridge ${log-lib} ${android-lib} display_media)
+
+target_link_libraries(display_jni_bridge
+    ${log-lib}
+    ${android-lib}
+    display_core
+)
 
 add_library(display_media SHARED src/display_media.c)
 target_link_libraries(display_media ${log-lib} ${android-lib})
