@@ -42,9 +42,8 @@ WEAK_STUB JSValue JS_NewArrayBuffer(JSContext *ctx, uint8_t *buf, size_t size, v
     (void)ctx; (void)buf; (void)size; (void)free_func; (void)opaque; (void)is_shared;
     return JS_UNDEFINED;
 }
-WEAK_STUB uint8_t *JS_GetArrayBuffer(JSContext *ctx, size_t *pbyte_offset, size_t *pbyte_length, JSValueConst obj) {
+WEAK_STUB uint8_t *JS_GetArrayBuffer(JSContext *ctx, size_t *pbyte_length, JSValueConst obj) {
     (void)ctx; (void)obj;
-    if (pbyte_offset) *pbyte_offset = 0;
     if (pbyte_length) *pbyte_length = 0;
     return NULL;
 }
@@ -86,4 +85,7 @@ WEAK_STUB int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m, const JSCFu
 WEAK_STUB JSValue JS_GetGlobalObject(JSContext *ctx) { (void)ctx; return JS_UNDEFINED; }
 WEAK_STUB JSValue JS_Call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv) { (void)ctx; (void)func_obj; (void)this_obj; (void)argc; (void)argv; return JS_UNDEFINED; }
 WEAK_STUB JSValue JS_DupValue(JSContext *ctx, JSValueConst v) { (void)ctx; return v; }
-WEAK_STUB JSValue JS_NewCFunction2(JSContext *ctx, JSCFunction *func, const char *name, int length, int cproto, int magic) { (void)ctx; (void)func; (void)name; (void)length; (void)cproto; (void)magic; return JS_UNDEFINED; }
+WEAK_STUB JSValue JS_NewCFunction2(JSContext *ctx, JSCFunction *func, const char *name, int length, int cproto, int magic) {
+    (void)ctx; (void)func; (void)name; (void)length; (void)cproto; (void)magic;
+    return JS_UNDEFINED;
+}

@@ -83,8 +83,8 @@ typedef struct JSCFunctionListEntry {
 } JSCFunctionListEntry;
 
 #define JS_CFUNC_DEF(name, length, func1) { name, 0, 0, 0, .u.func = { length, 0, (JSCFunction *)func1 } }
+#define JS_CFUNC_constructor 1
 
-// Function Declarations
 void JS_FreeValue(JSContext *ctx, JSValue v);
 void JS_FreeCString(JSContext *ctx, const char *ptr);
 const char *JS_ToCString(JSContext *ctx, JSValueConst val);
@@ -104,7 +104,7 @@ JSValue JS_NewObject(JSContext *ctx);
 JSValue JS_NewObjectClass(JSContext *ctx, JSClassID class_id);
 JSValue JS_NewArray(JSContext *ctx);
 JSValue JS_NewArrayBuffer(JSContext *ctx, uint8_t *buf, size_t size, void (*free_func)(JSRuntime *rt, void *opaque, void *ptr), void *opaque, int is_shared);
-uint8_t *JS_GetArrayBuffer(JSContext *ctx, size_t *pbyte_offset, size_t *pbyte_length, JSValueConst obj);
+uint8_t *JS_GetArrayBuffer(JSContext *ctx, size_t *pbyte_length, JSValueConst obj);
 
 JSValue JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
 JSValue JS_ThrowOutOfMemory(JSContext *ctx);
@@ -139,11 +139,10 @@ int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m, const JSCFunctionList
 JSValue JS_GetGlobalObject(JSContext *ctx);
 JSValue JS_Call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv);
 JSValue JS_DupValue(JSContext *ctx, JSValueConst v);
-#define JS_CFUNC_constructor 1
 JSValue JS_NewCFunction2(JSContext *ctx, JSCFunction *func, const char *name, int length, int cproto, int magic);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // QUICKJS_H_NACL
+#endif
