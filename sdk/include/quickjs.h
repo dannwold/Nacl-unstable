@@ -1,4 +1,3 @@
-#ifndef QUICKJS_H
 #ifndef QUICKJS_H_NACL
 #define QUICKJS_H_NACL
 
@@ -140,7 +139,7 @@ int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m, const JSCFunctionList
 JSValue JS_GetGlobalObject(JSContext *ctx);
 JSValue JS_Call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv);
 JSValue JS_DupValue(JSContext *ctx, JSValueConst v);
-JSValue JS_CFUNC_constructor(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+#define JS_CFUNC_constructor 1
 JSValue JS_NewCFunction2(JSContext *ctx, JSCFunction *func, const char *name, int length, int cproto, int magic);
 
 #ifdef __cplusplus
@@ -148,4 +147,3 @@ JSValue JS_NewCFunction2(JSContext *ctx, JSCFunction *func, const char *name, in
 #endif
 
 #endif // QUICKJS_H_NACL
-#endif // QUICKJS_H

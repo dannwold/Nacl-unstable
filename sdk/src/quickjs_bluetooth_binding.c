@@ -6,6 +6,12 @@
 
 #include "bluetooth_ipc_common.h"
 
+static void free_array_buffer(JSRuntime *rt, void *opaque, void *ptr) {
+    (void)rt;
+    (void)opaque;
+    free(ptr);
+}
+
 
 
 extern int bt_start_le_scan();
@@ -108,11 +114,14 @@ static JSValue js_bt_get_discovered_devices(JSContext *ctx, JSValueConst this_va
 
 
 
-            JSValue ab = JS_NewArrayBuffer(ctx, ab_buf, buffer[i].scan_record_len,
-
-                                          [](JSRuntime *rt, void *opaque, void *ptr) { free(ptr); },
-
-                                          NULL, FALSE);
+            JSValue ab = JS_NewArrayBuffer(
+                ctx,
+                ab_buf,
+                buffer[i].scan_record_len,
+                free_array_buffer,
+                NULL,
+                0
+            );
 
             JS_SetPropertyStr(ctx, device_obj, "scanRecord", ab);
 

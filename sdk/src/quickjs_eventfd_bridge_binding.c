@@ -10,7 +10,7 @@ static JSClassID js_eventfd_bridge_class_id;
 
 // GC Finalizer to avoid native pointer leaks
 
-static void js_eventfd_bridge_finalizer(JSFreeRuntime *rt, JSValue val) {
+static void js_eventfd_bridge_finalizer(JSRuntime *rt, JSValue val) {
 
     EventfdBridge *bridge = (EventfdBridge*)JS_GetOpaque(val, js_eventfd_bridge_class_id);
 
@@ -126,7 +126,7 @@ static int js_eventfd_init(JSContext *ctx, JSModuleDef *m) {
 
     JSValue proto = JS_NewObject(ctx);
 
-    JS_SetPropertyFunctionList(ctx, proto, js_eventfd_bridge_proto_funcs, sizeof(js_eventfd_bridge_proto_funcs)/sizeof(js_eventfd_bridge_proto_funcs));
+    JS_SetPropertyFunctionList(ctx, proto, js_eventfd_bridge_proto_funcs, sizeof(js_eventfd_bridge_proto_funcs)/sizeof(js_eventfd_bridge_proto_funcs[0]));
 
     JS_SetClassProto(ctx, js_eventfd_bridge_class_id, proto);
 

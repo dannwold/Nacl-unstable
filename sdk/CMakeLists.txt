@@ -120,8 +120,14 @@ target_link_libraries(native_host_bridge ${log-lib} ${android-lib} ${dl-lib})
 add_executable(service_daemon src/service_daemon.c)
 target_link_libraries(service_daemon ${log-lib})
 
-add_library(mock_client_main SHARED src/mock_client_main.c)
-target_link_libraries(mock_client_main ${log-lib} routing_core)
+add_library(mock_client_main SHARED
+    src/mock_client_main.c
+    src/quickjs_stub.c
+)
+target_link_libraries(mock_client_main
+    ${log-lib}
+    routing_core
+)
 
 add_library(quickjs_bindings SHARED
     src/quickjs_stub.c
