@@ -65,7 +65,7 @@ jobs:
           cmake -S sdk -B build_${{ matrix.abi }} \
             -DCMAKE_TOOLCHAIN_FILE="$NDK_TOOLCHAIN" \
             -DANDROID_ABI="${{ matrix.abi }}" \
-            -DANDROID_PLATFORM=android-21 \
+            -DANDROID_PLATFORM=android-26 \
             -DANDROID_STL=c++_shared \
             -DCMAKE_BUILD_TYPE=Release
             

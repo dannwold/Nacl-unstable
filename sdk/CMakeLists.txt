@@ -22,6 +22,16 @@ find_library(egl-lib EGL)
 find_library(gles3-lib GLESv3)
 find_library(vulkan-lib vulkan)
 
+if(NOT vulkan-lib)
+    set(vulkan-lib "")
+endif()
+if(NOT egl-lib)
+    set(egl-lib "")
+endif()
+if(NOT gles3-lib)
+    set(gles3-lib "")
+endif()
+
 # 1. Core Coordinator & JNI Bridge
 add_library(android_core SHARED
     src/android_core.c
