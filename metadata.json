@@ -1,0 +1,6 @@
+{
+  "name": "NACL - Native Capability Library Developer Portal",
+  "description": "Developer portal, interactive diagnostic widgets, QuickJS C-bindings sandbox, and wireless ADB simulator for the Native Capability Library.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

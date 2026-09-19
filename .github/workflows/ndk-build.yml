@@ -1,0 +1,118 @@
+name: Android NDK Multi-ABI Compiler
+
+on:
+  push:
+    branches: [ "main", "master", "dev", "develop" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-native-libs:
+    name: Build Native .so Libraries (${{ matrix.abi }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - armeabi-v7a
+          - x86_64
+          - x86
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK & NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK and CMake
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;26.1.10909125" "cmake;3.22.1"
+
+      - name: Compile Native C/C++ Shared Libraries (.so)
+        env:
+          NDK_PATH: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+        run: |
+          echo "Compiling native libraries for ABI: ${{ matrix.abi }}"
+          mkdir -p build_${{ matrix.abi }}
+          cd build_${{ matrix.abi }}
+          
+          cmake -S ../sdk -B . \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK_PATH/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI="${{ matrix.abi }}" \
+            -DANDROID_PLATFORM=android-21 \
+            -DANDROID_STL=c++_shared \
+            -DCMAKE_BUILD_TYPE=Release
+            
+          cmake --build . --config Release -j$(nproc)
+
+      - name: Stage ABI Artifacts
+        run: |
+          mkdir -p dist/jniLibs/${{ matrix.abi }}
+          mkdir -p dist/bin/${{ matrix.abi }}
+          
+          # Copy all generated .so files into standard Android jniLibs folder
+          cp build_${{ matrix.abi }}/lib/*.so dist/jniLibs/${{ matrix.abi }}/ 2>/dev/null || cp build_${{ matrix.abi }}/*.so dist/jniLibs/${{ matrix.abi }}/ || true
+          
+          # Copy standalone service daemons and executables
+          cp build_${{ matrix.abi }}/bin/* dist/bin/${{ matrix.abi }}/ 2>/dev/null || true
+
+      - name: Upload Single ABI Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nacl-libs-${{ matrix.abi }}
+          path: dist/
+
+  bundle-release-sdk:
+    name: Package Combined NACL Native SDK (.so + headers)
+    needs: build-native-libs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download All ABI Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: staged_artifacts/
+
+      - name: Consolidate SDK Release Package
+        run: |
+          mkdir -p nacl-sdk-release/jniLibs
+          mkdir -p nacl-sdk-release/bin
+          
+          # Copy headers
+          cp -r sdk/include nacl-sdk-release/include
+          
+          # Merge ABI jniLibs and binaries
+          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+            if [ -d "staged_artifacts/nacl-libs-$abi/jniLibs/$abi" ]; then
+              mkdir -p "nacl-sdk-release/jniLibs/$abi"
+              cp -r staged_artifacts/nacl-libs-$abi/jniLibs/$abi/* nacl-sdk-release/jniLibs/$abi/ 2>/dev/null || true
+            fi
+            if [ -d "staged_artifacts/nacl-libs-$abi/bin/$abi" ]; then
+              mkdir -p "nacl-sdk-release/bin/$abi"
+              cp -r staged_artifacts/nacl-libs-$abi/bin/$abi/* nacl-sdk-release/bin/$abi/ 2>/dev/null || true
+            fi
+          done
+
+      - name: Create Zip Bundle
+        run: |
+          cd nacl-sdk-release
+          zip -r ../nacl-native-sdk.zip .
+          cd ..
+
+      - name: Upload Complete SDK Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nacl-native-sdk-bundle
+          path: nacl-native-sdk.zip
