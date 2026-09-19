@@ -131,4 +131,24 @@ add_library(quickjs_bindings SHARED
     src/quickjs_shm_binding.c
     src/quickjs_telephony_binding.c
 )
-target_link_libraries(quickjs_bindings ${log-lib} ${dl-lib})
+target_link_libraries(quickjs_bindings
+    ${log-lib}
+    ${dl-lib}
+    android_core
+    sensors_client
+    telephony_client
+    bluetooth_client
+    ipc_crypto
+    shm_client
+    adb_client
+    routing_core
+    usb_subsystem
+    camera_subsystem
+    nfc_subsystem
+    nacl_input
+    nacl_audio
+    nacl_location
+    nacl_storage
+    power_battery
+    connectivity_automation
+)
