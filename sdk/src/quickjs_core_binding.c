@@ -298,6 +298,30 @@ static int js_android_core_init(JSContext *ctx, JSModuleDef *m) {
 
 
 
+    // Expose 'nacl' globally on globalThis for non-module global script evaluation
+
+    JSValue global_obj = JS_GetGlobalObject(ctx);
+
+    JSValue nacl_obj = JS_NewObject(ctx);
+
+    JS_SetPropertyFunctionList(
+
+        ctx, 
+
+        nacl_obj, 
+
+        js_nacl_context_proto_funcs, 
+
+        sizeof(js_nacl_context_proto_funcs) / sizeof(js_nacl_context_proto_funcs[0])
+
+    );
+
+    JS_SetPropertyStr(ctx, global_obj, "nacl", nacl_obj);
+
+    JS_FreeValue(ctx, global_obj);
+
+
+
     // Export primary initialization module hooks
 
     return JS_SetModuleExportList(ctx, m, js_android_core_funcs, sizeof(js_android_core_funcs)/sizeof(js_android_core_funcs));
