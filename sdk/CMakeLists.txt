@@ -6,15 +6,13 @@ add_definitions(-DANDROID_PLATFORM=1 -D__ANDROID__=1 -DANDROID=1)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-# Set global output directories for compiled shared objects and executables
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Direct CMake to use unified include directory for all target modules
-include_directories(include)
+# Prefer target-specific include dirs instead of a global include path
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Standard Android system libraries to link against
 find_library(log-lib log)
 find_library(android-lib android)
 find_library(sensor-lib sensor)
@@ -44,43 +42,36 @@ if(NOT mediandk-lib)
     set(mediandk-lib android)
 endif()
 
-# 1. Core Coordinator & JNI Bridge
 add_library(android_core SHARED
     src/android_core.c
     src/client_bridge.c
 )
 target_link_libraries(android_core ${log-lib} ${android-lib} ${dl-lib})
 
-# 2. Sensors Subsystem Client & Daemon
 add_library(sensors_client SHARED src/sensors_client.c)
 target_link_libraries(sensors_client ${log-lib})
 
 add_executable(sensors_daemon src/sensors_daemon.c)
 target_link_libraries(sensors_daemon ${log-lib} ${android-lib} ${sensor-lib})
 
-# 3. Telephony Subsystem
 add_library(telephony_client SHARED src/telephony_client.c)
 target_link_libraries(telephony_client ${log-lib})
 
-# 4. Bluetooth Subsystem
 add_library(bluetooth_client SHARED src/libbluetooth_client.c)
 target_link_libraries(bluetooth_client ${log-lib})
 
 add_library(bluetooth_svc SHARED src/bluetooth_svc.cpp)
 target_link_libraries(bluetooth_svc ${log-lib} ${dl-lib})
 
-# 5. IPC Cryptography Gateway
 add_library(ipc_crypto SHARED src/ipc_crypto.c)
 target_link_libraries(ipc_crypto ${log-lib})
 
-# 6. Shared Memory Subsystem Client & Daemon
 add_library(shm_client SHARED src/shm_client.c)
 target_link_libraries(shm_client ${log-lib})
 
 add_executable(shm_daemon src/shm_daemon.c)
 target_link_libraries(shm_daemon ${log-lib})
 
-# 7. Vulkan Rendering Layer & Display Bridges
 add_library(vulkan_renderer SHARED src/vulkan_renderer.c src/display.cpp)
 target_link_libraries(vulkan_renderer ${log-lib} ${android-lib} ${egl-lib} ${gles3-lib} ${vulkan-lib})
 
@@ -90,15 +81,12 @@ target_link_libraries(display_jni_bridge ${log-lib} ${android-lib} display_media
 add_library(display_media SHARED src/display_media.c)
 target_link_libraries(display_media ${log-lib} ${android-lib})
 
-# 8. ADB Loopback Client Gateway
 add_library(adb_client SHARED src/adb_client.c)
 target_link_libraries(adb_client ${log-lib})
 
-# 9. Dynamic Routing & Core Control
 add_library(routing_core SHARED src/routing_core.c)
 target_link_libraries(routing_core ${log-lib} ${dl-lib})
 
-# 10. Hardware Subsystems (USB, Camera, NFC, Input, Audio, Location, Storage, Power)
 add_library(usb_subsystem SHARED src/usb_subsystem.c)
 target_link_libraries(usb_subsystem ${log-lib})
 
@@ -123,22 +111,18 @@ target_link_libraries(nacl_storage ${log-lib})
 add_library(power_battery SHARED src/power_battery.c)
 target_link_libraries(power_battery ${log-lib})
 
-# 11. Connectivity & Automation Controller
 add_library(connectivity_automation SHARED src/connectivity_automation.c)
 target_link_libraries(connectivity_automation ${log-lib} adb_client)
 
-# 12. Host App Native Bridge
 add_library(native_host_bridge SHARED src/native_host_bridge.cpp)
 target_link_libraries(native_host_bridge ${log-lib} ${android-lib} ${dl-lib})
 
-# 13. Service Daemon & Mock Client Executables
 add_executable(service_daemon src/service_daemon.c)
 target_link_libraries(service_daemon ${log-lib})
 
 add_library(mock_client_main SHARED src/mock_client_main.c)
-target_link_libraries(mock_client_main ${log-lib} android_core)
+target_link_libraries(mock_client_main ${log-lib} routing_core)
 
-# 14. Universal QuickJS Binding Engine Module
 add_library(quickjs_bindings SHARED
     src/quickjs_stub.c
     src/quickjs_eventfd_bridge_binding.c
