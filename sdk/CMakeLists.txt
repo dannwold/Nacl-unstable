@@ -113,8 +113,8 @@ target_link_libraries(native_host_bridge ${log-lib} ${android-lib})
 add_executable(service_daemon src/service_daemon.c)
 target_link_libraries(service_daemon ${log-lib})
 
-add_executable(mock_client_main src/mock_client_main.c)
-target_link_libraries(mock_client_main ${log-lib})
+add_library(mock_client_main SHARED src/mock_client_main.c)
+target_link_libraries(mock_client_main ${log-lib} android_core)
 
 # 14. Universal QuickJS Binding Engine Module
 add_library(quickjs_bindings SHARED
