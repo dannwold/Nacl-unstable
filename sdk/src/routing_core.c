@@ -138,17 +138,9 @@ static int execute_bluetooth_scan_via_jni(const uint8_t *payload, uint32_t paylo
 
     if (!g_jvm) {
 
-        // Locate active ART JavaVM instances running inside the process space
+        fprintf(stderr, "[Router] JVM has not been registered\n");
 
-        jsize vm_count = 0;
-
-        if (JNI_GetCreatedJavaVMs(&g_jvm, 1, &vm_count) != JNI_OK || vm_count == 0) {
-
-            fprintf(stderr, "[Router] Failed to attach: No JVM context found running in current process\n");
-
-            return -1;
-
-        }
+        return -1;
 
     }
 
@@ -311,5 +303,25 @@ int dispatch_hardware_command(const char *capability, const uint8_t *payload, ui
     // Jump directly to the registered function pointer (O(1) execution timing)
 
     return execute_target(payload, payload_len, out_buffer, out_len);
+
+}
+
+
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
+
+    (void)reserved;
+
+    g_jvm = vm;
+
+    return JNI_VERSION_1_6;
+
+}
+
+
+
+void routing_core_set_jvm(JavaVM *vm) {
+
+    g_jvm = vm;
 
 }
