@@ -1,25 +1,14 @@
-┌─────────────────────────────────┐
+#ifndef NDK_CAMERA_MANAGER_H
+#define NDK_CAMERA_MANAGER_H
 
-│     Java App (Permission)       │
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-└─────────────────────────────────┘
+/* Camera manager declarations go here. */
 
-                 │ (Extract raw FD)
+#ifdef __cplusplus
+}
+#endif
 
-                 ▼
-
-┌─────────────────────────────────┐
-
-│       libusb.so (Native C)       │
-
-└─────────────────────────────────┘
-
-                 │ (Raw POSIX ioctl)
-
-                 ▼
-
-┌─────────────────────────────────┐
-
-│   Linux Kernel (/dev/bus/usb)   │
-
-└─────────────────────────────────┘
+#endif /* NDK_CAMERA_MANAGER_H */

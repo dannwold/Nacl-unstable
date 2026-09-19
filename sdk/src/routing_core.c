@@ -14,11 +14,13 @@
 
 #include <pthread.h>
 
+#include <stdbool.h>
+
 
 
 // Global route registry
 
-static CapabilityRoute g_bluetooth_route = { "bluetooth_scan", 33, PATHWAY_UNINITIALIZED, nullptr };
+static CapabilityRoute g_bluetooth_route = { "bluetooth_scan", 33, PATHWAY_UNINITIALIZED, NULL };
 
 static pthread_mutex_t g_routing_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -124,7 +126,7 @@ static int execute_bluetooth_scan_via_binder(const uint8_t *payload, uint32_t pa
 
 // Reference pointer to the running ART virtual machine instance
 
-static JavaVM *g_jvm = nullptr;
+static JavaVM *g_jvm = NULL;
 
 
 
@@ -152,17 +154,17 @@ static int execute_bluetooth_scan_via_jni(const uint8_t *payload, uint32_t paylo
 
 
 
-    JNIEnv *env = nullptr;
+    JNIEnv *env = NULL;
 
     bool thread_attached = false;
 
-    int env_res = g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+    int env_res = (*g_jvm)->GetEnv(g_jvm, (void**)&env, JNI_VERSION_1_6);
 
 
 
     if (env_res == JNI_EDETACHED) {
 
-        if (g_jvm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
+        if ((*g_jvm)->AttachCurrentThread(g_jvm, &env, NULL) != JNI_OK) {
 
             fprintf(stderr, "[Router] Failed to register background thread to JVM context\n");
 
@@ -204,7 +206,7 @@ static int execute_bluetooth_scan_via_jni(const uint8_t *payload, uint32_t paylo
 
     if (thread_attached) {
 
-        g_jvm->DetachCurrentThread();
+        (*g_jvm)->DetachCurrentThread(g_jvm);
 
     }
 
@@ -280,7 +282,7 @@ ExecutionPathway resolve_capability_pathway(const char *capability) {
 
 int dispatch_hardware_command(const char *capability, const uint8_t *payload, uint32_t payload_len, uint8_t *out_buffer, uint32_t *out_len) {
 
-    HardwareCommandFunc execute_target = nullptr;
+    HardwareCommandFunc execute_target = NULL;
 
 
 
