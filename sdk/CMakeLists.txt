@@ -128,6 +128,7 @@ target_link_libraries(mock_client_main ${log-lib} android_core)
 
 # 14. Universal QuickJS Binding Engine Module
 add_library(quickjs_bindings SHARED
+    src/quickjs_stub.c
     src/quickjs_eventfd_bridge_binding.c
     src/quickjs_eventfd_bridge.c
     src/quickjs_adb_binding.c
