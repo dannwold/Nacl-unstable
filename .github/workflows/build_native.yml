@@ -1,0 +1,93 @@
+name: Android NDK Native Build (build_native.yml)
+
+on:
+  push:
+    branches: [ "main", "master", "dev", "develop" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-native-libs:
+    name: Build Native .so Libraries (${{ matrix.abi }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - armeabi-v7a
+          - x86_64
+          - x86
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Configure Android NDK
+        run: |
+          echo "=== Setting up Android NDK ==="
+          NDK_PATH=""
+          
+          if [ -n "$ANDROID_NDK_LATEST_HOME" ] && [ -f "$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" ]; then
+            NDK_PATH="$ANDROID_NDK_LATEST_HOME"
+          elif [ -n "$ANDROID_NDK_HOME" ] && [ -f "$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" ]; then
+            NDK_PATH="$ANDROID_NDK_HOME"
+          elif [ -d "/usr/local/lib/android/sdk/ndk" ]; then
+            NDK_PATH=$(find "/usr/local/lib/android/sdk/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          fi
+
+          if [ -z "$NDK_PATH" ] || [ ! -f "$NDK_PATH/build/cmake/android.toolchain.cmake" ]; then
+            echo "Installing NDK via sdkmanager..."
+            SDKM="/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
+            if [ -f "$SDKM" ]; then
+              yes | $SDKM --licenses || true
+              $SDKM "ndk;25.2.9519653" "cmake;3.22.1" || true
+              NDK_PATH="/usr/local/lib/android/sdk/ndk/25.2.9519653"
+            fi
+          fi
+
+          echo "Detected NDK Path: $NDK_PATH"
+          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+          echo "NDK_TOOLCHAIN=$NDK_PATH/build/cmake/android.toolchain.cmake" >> $GITHUB_ENV
+
+      - name: Clear All Build Directories
+        run: |
+          echo "Clearing all build directories prior to compilation..."
+          rm -rf build_* || true
+
+      - name: Compile Native C/C++ Shared Libraries (.so)
+        run: |
+          echo "Compiling native libraries for ABI: ${{ matrix.abi }}"
+          echo "Using toolchain: $NDK_TOOLCHAIN"
+          
+          cmake -S sdk -B build_${{ matrix.abi }} \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK_TOOLCHAIN" \
+            -DANDROID_ABI="${{ matrix.abi }}" \
+            -DANDROID_PLATFORM=android-26 \
+            -DANDROID_STL=c++_shared \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-D_GNU_SOURCE -D__ANDROID_API__=26 -I/usr/local/lib/android/sdk/ndk/29.0.14206865/sysroot/usr/include" \
+            -DCMAKE_CXX_FLAGS="-I/usr/local/lib/android/sdk/ndk/29.0.14206865/sysroot/usr/include -D_GNU_SOURCE -D__ANDROID_API__=26"
+            
+          cmake --build build_${{ matrix.abi }} --config Release -j$(nproc)
+
+      - name: Stage ABI Artifacts
+        run: |
+          mkdir -p dist/jniLibs/${{ matrix.abi }}
+          mkdir -p dist/bin/${{ matrix.abi }}
+          
+          cp build_${{ matrix.abi }}/lib/*.so dist/jniLibs/${{ matrix.abi }}/ 2>/dev/null || cp build_${{ matrix.abi }}/*.so dist/jniLibs/${{ matrix.abi }}/ || true
+          cp build_${{ matrix.abi }}/bin/* dist/bin/${{ matrix.abi }}/ 2>/dev/null || true
+
+      - name: Upload Single ABI Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nacl-libs-${{ matrix.abi }}
+          path: dist/
