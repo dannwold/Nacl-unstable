@@ -55,7 +55,7 @@ add_library(bluetooth_client SHARED src/libbluetooth_client.c)
 target_link_libraries(bluetooth_client ${log-lib})
 
 add_library(bluetooth_svc SHARED src/bluetooth_svc.cpp)
-target_link_libraries(bluetooth_svc ${log-lib})
+target_link_libraries(bluetooth_svc ${log-lib} ${dl-lib})
 
 # 5. IPC Cryptography Gateway
 add_library(ipc_crypto SHARED src/ipc_crypto.c)
@@ -117,7 +117,7 @@ target_link_libraries(connectivity_automation ${log-lib} adb_client)
 
 # 12. Host App Native Bridge
 add_library(native_host_bridge SHARED src/native_host_bridge.cpp)
-target_link_libraries(native_host_bridge ${log-lib} ${android-lib})
+target_link_libraries(native_host_bridge ${log-lib} ${android-lib} ${dl-lib})
 
 # 13. Service Daemon & Mock Client Executables
 add_executable(service_daemon src/service_daemon.c)
