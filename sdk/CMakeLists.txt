@@ -60,8 +60,8 @@ target_link_libraries(telephony_client ${log-lib})
 add_library(bluetooth_client SHARED src/libbluetooth_client.c)
 target_link_libraries(bluetooth_client ${log-lib})
 
-add_library(bluetooth_svc SHARED src/bluetooth_svc.cpp)
-target_link_libraries(bluetooth_svc ${log-lib} ${dl-lib})
+add_executable(bluetooth_svc src/bluetooth_svc.cpp)
+target_link_libraries(bluetooth_svc ${log-lib} ${dl-lib} ${android-lib})
 
 add_library(ipc_crypto SHARED src/ipc_crypto.c)
 target_link_libraries(ipc_crypto ${log-lib})
