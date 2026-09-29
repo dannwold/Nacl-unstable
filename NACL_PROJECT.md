@@ -8,8 +8,10 @@
 
 - Repository: `dannwold/Nacl-unstable`
 - Audited branch: `main`
-- Audited commit: `e033a2e6c70b89a2ed9e4346e15182603a70f86a`
-- Commit message: **Align broker backend query protocol**
+- Audited baseline commit: `e033a2e6c70b89a2ed9e4346e15182603a70f86a`
+- Current repository HEAD: `35f87c3db2abccf83a189965a8d13e295b72e19f`
+- Current HEAD commit: **Add persistent NACL project working record**
+- The current HEAD adds/updates this project record; the native implementation baseline remains the `e033a2e6` state audited below.
 - Repository tree at audit time: **129 tracked blob files**
 - Companion source material read for this audit:
   - `Continue Nacl Loading Implementation.PDF`
@@ -350,6 +352,15 @@ The prior chat verified:
 - status: completed
 - conclusion: success
 
+The live Actions API now also verifies:
+
+- Run **#34**
+- commit `35f87c3d`
+- event: push
+- status: completed
+- conclusion: success
+- workflow: Android NDK Multi-ABI Compiler
+
 When checking future push-triggered runs, use the direct Actions API route rather than the known commit-workflow-runs wrapper that filters to pull-request-triggered runs.
 
 ## 14. Documentation Drift
@@ -643,5 +654,83 @@ The primary blocker is not the absence of dynamic loading. It is **inconsistent 
 
 The next implementation phase should therefore begin with a verified symbol/module map and ABI reconciliation, followed by a typed generic resolver. This keeps the project aligned with the actual code rather than layering another abstraction over mismatched interfaces.
 
+
+## 21. Deep Audit Findings — 2026-09-29
+
+### Loader finding
+The requested lazy/function-level behavior is already partially implemented in sdk/src/android_core.c: nacl_core_get_symbol() automatically loads an unloaded module and then calls dlsym(). The missing piece is not basic dynamic lookup; it is a coherent ABI and registry around that mechanism.
+
+### Build/registry finding
+The current sdk/CMakeLists.txt builds substantially more targets than the seven-module NaclModuleType registry. Several registry paths point to libraries that are not current CMake targets, while current targets such as nacl_audio, nacl_input, nacl_storage, power_battery, camera_subsystem, nfc_subsystem, and usb_subsystem have no corresponding entries in the core registry.
+
+### Unified-API finding
+nacl_unified_api.h declares a 21-module public ABI, but the inspected native source inventory does not provide the declared unified lifecycle/orchestration implementation (nacl_init, nacl_shutdown, metadata, event registration, mock-mode control, command dispatch). The seven-module core API is the implemented loader path.
+
+### JNI bootstrap finding
+native_host_bridge.cpp dynamically loads libandroid_core.so and looks for initialize_core_registry. The inspected android_core.c does not export that symbol. This makes the current native-host bootstrap path inconsistent with the actual core implementation.
+
+### Host-bridge finding
+host_app/app/src/main/java/com/your/app/NaclBridge.kt is named like Kotlin but contains Dart FFI syntax/imports (dart:ffi, package:ffi/ffi.dart). It looks up nacl_initialize, nacl_set_subsystem_mock_mode, and nacl_register_event_listener, which are not the symbols exported by the inspected core header/source. This host integration cannot currently be treated as a verified ABI consumer.
+
+### Dynamic-loading pattern outside the core
+The repository independently uses dlopen/dlsym in multiple places, notably ADB crypto, IPC crypto, sensor daemon compatibility lookup, Bluetooth runtime setup, and routing. These are separate local dynamic-loading mechanisms, not yet unified under the NACL core loader.
+
+### Runtime maturity finding
+Several subsystem implementations are explicitly simulation-oriented or incomplete: audio/input/location/power use synthetic telemetry or placeholder operations; the Bluetooth daemon generates mock BLE telemetry; the generic service daemon returns mock Wi-Fi/Bluetooth acknowledgements; the routing layer returns simulated Binder/JNI success strings. These implementations should be classified as mocks/stubs versus production hardware paths in the eventual module/function registry.
+
+### IPC finding
+The privilege broker is more concrete than several subsystem mocks: it validates a fixed binary protocol, bounds payloads, requires UID 2000 on the daemon side, and currently dispatches Bluetooth scan and Wi-Fi scan. The latest backend-query protocol change is internally consistent, and the live CI result confirms the change builds.
+
+### Documentation finding
+The repository contains generated/historical documentation that describes older file counts and older CMake layouts. docs/directory-map.md still describes an 81-file workspace, while the current Git tree contains 129 blob files. Documentation is therefore evidence of intended architecture/history, not automatically proof of current implementation.
+
+### CI finding
+The push-triggered workflow is functioning. The previous visibility issue was caused by the GitHub connector's commit-run wrapper filtering to pull-request-triggered runs. Direct Actions API inspection now sees push runs. Current Run #34 is green on the project-record commit.
+
+## 22. Deep Audit Working Thoughts
+
+**Current thought:** Do not add another generic loader blindly. First make the existing seven-module loader authoritative for one concrete slice, preferably Bluetooth, because its client library has a small explicit exported C ABI and a separate daemon boundary.
+
+**Proposed sequence:**
+1. Inventory every intended exported function and its owning CMake target.
+2. Define canonical module IDs/names/paths from actual build outputs, not stale documentation.
+3. Add typed function descriptors/signatures rather than exposing arbitrary string casts throughout callers.
+4. Separate module lifetime from subsystem activation. dlopen/dlsym should not be conflated with starting a daemon, opening a device, or registering callbacks.
+5. Reconcile the seven-module API and 21-module unified API before making either one the public long-term ABI.
+6. Reconcile native-host/JNI and Dart/FFI consumers against that same ABI.
+7. Add focused loader tests before expanding the architecture.
+
+**Important safety concern:** unloading a module while a cached function pointer, callback, worker thread, or subsystem object still depends on it is unsafe. Any future resolver should make lifetime ownership explicit.
+
+**Important ABI concern:** function-pointer casts from void* returned by dlsym() need a controlled, documented ABI boundary. The registry should own signatures rather than making each caller invent its own cast.
+
+## 23. Current Project State
+
+- Branch: main
+- Current HEAD: 35f87c3db2abccf83a189965a8d13e295b72e19f
+- Native baseline under active architectural analysis: e033a2e6c70b89a2ed9e4346e15182603a70f86a
+- Repository tree: 129 blob files
+- Latest CI: Run #34, push, completed/success
+- No loader implementation changes have been made during this audit.
+- Persistent project record: NACL_PROJECT.md
+
+## 24. Next Engineering Target
+
+The next implementation task should be authoritative module/function inventory and loader-ABI design, not yet a broad refactor.
+
+The first concrete deliverable should answer, from current source/build evidence:
+- Which .so owns each public function?
+- What is the canonical load path for each .so?
+- What dependencies must be loaded with it?
+- What initialization/activation does the function require after symbol resolution?
+- What function-pointer signature does the resolver guarantee?
+- When is unloading forbidden because active work still references the module?
+
+Only after that map is stable should the generic function-level lazy resolver be implemented.
+
+## 25. Audit Conclusion
+
+The repository has a real native subsystem foundation and already contains the core primitive required for lazy loading: lazy dlopen followed by targeted dlsym. The dominant problem is architectural convergence across the loader registry, unified API, build outputs, host bridges, runtime activation, and documentation.
+
 ---
-**Last audited commit:** `e033a2e6c70b89a2ed9e4346e15182603a70f86a`
+**Last audited repository HEAD:** 35f87c3db2abccf83a189965a8d13e295b72e19f
