@@ -50,11 +50,26 @@ typedef struct {
     uint32_t payload_len;
 } NaclBrokerResponse;
 
+/* Capability-local command IDs. These are protocol operations, not shell commands. */
+#define NACL_BT_SCAN_START  1u
+#define NACL_BT_SCAN_GET    2u
+#define NACL_BT_SCAN_STOP   3u
+
+#define NACL_WIFI_SCAN_START 1u
+#define NACL_WIFI_SCAN_GET   2u
+
+typedef struct {
+    NaclBrokerRequest request;
+    uint32_t data_len;
+} NaclBrokerDispatchEnvelope;
+
 int nacl_privilege_backend_available(NaclPrivilegeBackend backend);
 int nacl_privilege_capability_supported(NaclCapability capability);
 const char *nacl_privilege_backend_name(NaclPrivilegeBackend backend);
 const char *nacl_privilege_capability_name(NaclCapability capability);
 int nacl_privilege_broker_is_uid2000(void);
+
+/* Capability-specific operations exposed through the broker. */
 
 /* Client-side broker transport. Returns a negative StatusCode on failure. */
 int nacl_privilege_broker_ping(void);
