@@ -810,3 +810,52 @@ A resolved function pointer must not outlive its owning module. Any future unloa
 3. Map every function to its exact CMake target and runtime dependency set.
 4. Determine which current functions are intended stable ABI versus internal implementation helpers.
 5. Define canonical module IDs/paths only after the above evidence is complete.
+
+
+## 27. CI ELF Export Verification — 2026-09-29
+
+CI Run #36 for commit `4d4ef836bb2f37879b08bb6a944fb4948fcac9a8` completed successfully.
+
+The arm64-v8a workflow artifact `nacl-libs-arm64-v8a` was downloaded and inspected directly with ELF tooling. It contains 26 shared libraries plus daemon executables; the staged JNI library set includes 25 `.so` files.
+
+This is the first verification layer based on actual built ELF artifacts rather than source declarations alone.
+
+### Verified export findings
+
+- `libandroid_core.so` exports the expected `nacl_core_*` loader/lifecycle/error/version/property symbols. It also exports `execute_hardware_command` and `get_client_library_version`.
+- `libbluetooth_client.so` exports the four intended client functions and additionally exports `connect_to_bt_daemon`.
+- `libsensors_client.so` exports `start_sensor_stream`, `stop_sensor_stream`, and additionally `sensor_listener_thread`.
+- `libshm_client.so` unexpectedly exports `main`; no clearly named public SHM client API appeared in the first export pass.
+- `libnative_host_bridge.so` exports `JNI_OnLoad` and the two `NativeInterface` JNI entry points, but does **not** export `initialize_core_registry`.
+- `libconnectivity_automation.so` exports the four observed automation functions.
+- `libquickjs_bindings.so` exports the QuickJS runtime surface plus many binding functions, so it is not a simple single-subsystem ABI.
+- `libnfc_subsystem.so` exports the NFC lifecycle/transceive surface plus its JNI callback.
+- `libusb_subsystem.so` exports interface functions plus bulk read/write helpers.
+- `libvulkan_renderer.so` exports the expected `nacl_vulkan_*` API plus helper symbols `create_shader_module` and `find_memory_type`.
+
+### Export-verification conclusion
+
+The source/build inventory is directionally correct but cannot by itself define the stable ABI. The actual ELF output shows three categories that must remain distinct:
+
+1. intended public functions;
+2. additional implementation/helper exports;
+3. unexpected or stale exports.
+
+The future lazy-resolution registry therefore needs an explicit **stable ABI classification**, rather than automatically treating every ELF-visible function as public.
+
+## 28. Revised Lazy-Loader Priority
+
+1. Make `libbluetooth_client.so` the first canonical lazy-loading module.
+2. Define typed descriptors for its four intended client functions.
+3. Keep `connect_to_bt_daemon` outside the stable registry until its ABI purpose is confirmed.
+4. Establish module-lifetime ownership before introducing unload-based cached function pointers.
+5. Verify the resolver against the actual arm64 ELF artifact.
+6. Generalize only after the Bluetooth slice is proven.
+7. Separately investigate `libshm_client.so:main` and the stale `initialize_core_registry` expectation.
+
+### Current no-code-change status
+
+No native loader implementation was changed during this ELF verification pass. Work remains in inventory/design until the resolver ABI is defined.
+
+---
+**Last verified CI build:** Run #36, commit `4d4ef836bb2f37879b08bb6a944fb4948fcac9a8`, conclusion: success.
