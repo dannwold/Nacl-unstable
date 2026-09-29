@@ -24,15 +24,9 @@ static int execute_adb_shell_cmd(AdbSession *session, const char *cmd, char *out
 
 
 
-    // Open a dynamic shell channel specifically for this command
-
-    char shell_cmd[512];
-
-    snprintf(shell_cmd, sizeof(shell_cmd), "shell:%s", cmd);
-
-
-
-    if (adb_open_shell_channel(session, shell_cmd) < 0) {
+    // adb_open_shell_channel() adds the ADB "shell:" service prefix itself.
+    // Keep the command argument free of transport-level prefixes.
+    if (adb_open_shell_channel(session, cmd) < 0) {
 
         fprintf(stderr, "[Automation] Failed to open shell channel for: %s\n", cmd);
 

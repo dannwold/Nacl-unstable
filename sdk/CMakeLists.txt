@@ -98,6 +98,12 @@ target_link_libraries(display_media ${log-lib} ${android-lib})
 add_library(adb_client SHARED src/adb_client.c)
 target_link_libraries(adb_client ${log-lib})
 
+add_library(privilege_broker SHARED src/privilege_broker.c)
+target_link_libraries(privilege_broker ${log-lib})
+
+add_executable(privilege_broker_daemon src/privilege_broker_daemon.c)
+target_link_libraries(privilege_broker_daemon ${log-lib})
+
 add_library(routing_core SHARED src/routing_core.c)
 target_link_libraries(routing_core ${log-lib} ${dl-lib})
 

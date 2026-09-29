@@ -27,6 +27,7 @@ extern "C" {
 #define IPC_SOCKET_BT   "/data/local/tmp/sdk/sockets/bluetooth.sock"
 
 #define IPC_SOCKET_SENS "/data/local/tmp/sdk/sockets/sensors.sock"
+#define IPC_SOCKET_PRIVILEGE "/data/local/tmp/sdk/sockets/privilege.sock"
 
 
 
@@ -42,7 +43,8 @@ typedef enum {
 
     SUBSYSTEM_SENSORS   = 3,
 
-    SUBSYSTEM_LOCATION  = 4
+    SUBSYSTEM_LOCATION  = 4,
+    SUBSYSTEM_PRIVILEGE_BROKER = 5
 
 } SubsystemType;
 
