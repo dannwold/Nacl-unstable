@@ -1420,3 +1420,54 @@ Evidence:
 **Next:** `nfc_subsystem`.
 
 Do not repeat completed USB, privilege-broker, ADB, IPC Crypto, Sensors, Bluetooth, or Telephony evidence unless contradictory new evidence appears.
+
+### 40. NFC Subsystem Resolver Slice Completed — 2026-09-29
+
+**VERIFIED:** NFC evidence characterization is complete for the current repository and ARM64 CI artifact.
+
+Evidence:
+- CMake owner: `nfc_subsystem` from `sdk/src/nfc_subsystem.c`
+- Public header: `sdk/include/nfc_subsystem.h`
+- Runtime artifact: `libnfc_subsystem.so`
+- CI artifact: ARM64 `nacl-libs-arm64-v8a`, artifact ID `11046608330`, workflow run ID `36598137213`
+- Dynamic exports: five total:
+  - `nfc_initialize`
+  - `nfc_start_reader_mode`
+  - `nfc_stop_reader_mode`
+  - `nfc_transceive_apdu`
+  - `Java_com_nacl_native_NfcBridge_onTagDiscovered`
+- ELF NEEDED:
+  - `liblog.so`
+  - `libm.so`
+  - `libdl.so`
+  - `libc.so`
+- SONAME: `libnfc_subsystem.so`
+- No RPATH/RUNPATH.
+- No NACL-internal DT_NEEDED dependency.
+
+Important ABI findings:
+- The first four symbols are public-header functions; the fifth is a JNI entry hook.
+- `nfc_initialize()` currently attempts `NfcAdapter.getDefaultAdapter()` with a NULL Context, so working real-device initialization is not established.
+- `nfc_start_reader_mode()` resolves `enableReaderMode()` but does not invoke it.
+- `nfc_stop_reader_mode()` clears the native callback but does not disable Android reader mode.
+- JNI/tag/context state is held in process-global variables without synchronization.
+- Public structs contain packed JNI runtime handles, making layout and lifetime part of the ABI.
+
+**Classification:**
+- Four public C functions: **UNKNOWN / INCOMPLETE**, not stable ABI candidates yet.
+- JNI callback export: **INTERNAL JNI HOOK**, not public stable ABI.
+
+**INFERENCE:** NFC is a clear case where generic library/symbol resolution must be separated from framework activation, JNI callback wiring, and tag/session lifetime. The current module needs a specialized Android/JNI activation adapter rather than being treated as a simple leaf capability.
+
+Research record:
+- `research/nfc-resolver.md`
+
+**Native implementation changes remain unauthorized.**
+
+### Current position
+
+**PHASE C — `nfc_subsystem`: COMPLETE as evidence characterization.**
+
+**Next:** `nacl_location`.
+
+Do not repeat completed NFC, USB, privilege-broker, ADB, IPC Crypto, Sensors, Bluetooth, or Telephony evidence unless contradictory evidence appears.
