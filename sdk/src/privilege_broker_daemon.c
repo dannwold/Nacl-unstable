@@ -43,6 +43,18 @@ static int write_full(int fd, const void *buffer, size_t length) {
 
 /* Forward a fixed Wi-Fi capability operation to the existing Wi-Fi service. */
 static int wifi_dispatch(uint32_t command, void *out, uint32_t *out_len) {
+    uint16_t ipc_command;
+    switch (command) {
+        case NACL_WIFI_SCAN_START:
+            ipc_command = CMD_WIFI_START_SCAN;
+            break;
+        case NACL_WIFI_SCAN_GET:
+            ipc_command = CMD_WIFI_GET_RESULTS;
+            break;
+        default:
+            return STATUS_UNSUPPORTED;
+    }
+
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) return STATUS_ERROR;
 
@@ -61,7 +73,7 @@ static int wifi_dispatch(uint32_t command, void *out, uint32_t *out_len) {
     req.magic = IPC_MAGIC_SIGNATURE;
     req.transaction_id = 1;
     req.subsystem = SUBSYSTEM_WIFI;
-    req.command = (uint16_t)command;
+    req.command = ipc_command;
     req.status = STATUS_OK;
     req.payload_len = 0;
 
@@ -182,7 +194,7 @@ static void handle_client(int fd) {
     } else if (request_header.command == NACL_BROKER_PING) {
         response_header.status = STATUS_OK;
     } else if (request_header.command == NACL_BROKER_GET_BACKEND) {
-        if (request_header.payload_len != sizeof(NaclBrokerRequest)) {
+        if (request_header.payload_len != 0) {
             response_header.status = STATUS_ERROR;
         } else {
             NaclBrokerResponse response;
