@@ -859,3 +859,46 @@ No native loader implementation was changed during this ELF verification pass. W
 
 ---
 **Last verified CI build:** Run #36, commit `4d4ef836bb2f37879b08bb6a944fb4948fcac9a8`, conclusion: success.
+
+
+## 29. ELF Export Verification Correction — 2026-09-29
+
+**Method correction:** the first export pass used `readelf -Ws`, which includes the regular ELF symbol table and can therefore show local/static implementation symbols. That output was not sufficient to claim dynamic exports.
+
+The authoritative export check for this pass is now `nm -D --defined-only` / `readelf --dyn-syms`, which inspects the dynamic symbol table used for runtime symbol lookup.
+
+### Corrected dynamic exports
+
+- `libbluetooth_client.so` dynamically exports exactly the four header/API functions:
+  - `bt_start_le_scan`
+  - `bt_stop_le_scan`
+  - `bt_get_discovered_devices`
+  - `bt_get_client_version`
+- The source-level `static connect_to_bt_daemon()` is **not** a dynamic export.
+- `libsensors_client.so` dynamically exports exactly `start_sensor_stream` and `stop_sensor_stream`.
+- `libconnectivity_automation.so` dynamically exports the three observed `auto_*` functions; `execute_adb_shell_cmd` was a regular-symbol-table result, not a dynamic export.
+- `libnative_host_bridge.so` dynamically exports `JNI_OnLoad`, the two `NativeInterface` JNI entry points, and `get_safe_jni_env`.
+- `libshm_client.so` dynamically exports `main`, which remains an actual anomaly requiring source/build investigation.
+- `libandroid_core.so` dynamically exports the core loader/lifecycle/error/version/property surface plus `execute_hardware_command` and `get_client_library_version`.
+
+### Bluetooth dependency evidence
+
+The built `libbluetooth_client.so` has these ELF NEEDED dependencies:
+
+- `liblog.so`
+- `libm.so`
+- `libdl.so`
+- `libc.so`
+
+It does not declare another NACL shared library as an ELF NEEDED dependency. Its runtime daemon dependency is instead established by the Unix-domain socket path in `bluetooth_ipc_common.h`:
+
+`/data/local/tmp/sdk/sockets/bluetooth.sock`
+
+This reinforces Bluetooth as a clean first lazy-loader slice: one client module, four dynamic ABI functions, standard Android runtime dependencies, and a separate daemon activation boundary.
+
+### Corrected conclusion
+
+The previous section's claims about incidental helper exports should be interpreted as **regular symbol-table observations**, not dynamic ABI exports. The actual dynamic-export evidence strengthens the case for using the four Bluetooth client functions as the first canonical resolver registry.
+
+---
+**Export verification method:** `nm -D --defined-only` / `readelf --dyn-syms` against CI Run #36 arm64-v8a artifact.
