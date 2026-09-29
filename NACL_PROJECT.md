@@ -707,10 +707,10 @@ The push-triggered workflow is functioning. The previous visibility issue was ca
 ## 23. Current Project State
 
 - Branch: main
-- Current HEAD: 35f87c3db2abccf83a189965a8d13e295b72e19f
+- Current HEAD: 89e54328f22220d896d46635a3c29b97d3d7bc39
 - Native baseline under active architectural analysis: e033a2e6c70b89a2ed9e4346e15182603a70f86a
 - Repository tree: 129 blob files
-- Latest CI: Run #34, push, completed/success
+- Latest CI: Run #35, push, completed/success
 - No loader implementation changes have been made during this audit.
 - Persistent project record: NACL_PROJECT.md
 
@@ -734,3 +734,79 @@ The repository has a real native subsystem foundation and already contains the c
 
 ---
 **Last audited repository HEAD:** 35f87c3db2abccf83a189965a8d13e295b72e19f
+
+
+## 26. Authoritative Preliminary Module / Function Inventory — 2026-09-29
+
+This inventory is derived from the current `sdk/CMakeLists.txt`, public subsystem headers, and matching native source definitions. It is a source/build inventory, **not yet an ELF-level export verification**.
+
+### Actual CMake shared-library targets
+
+| Target / output | Primary source | Current public/native function surface inspected |
+|---|---|---|
+| `android_core` | `android_core.c`, `client_bridge.c` | `nacl_core_initialize`, `nacl_core_shutdown`, version/API/property functions, `nacl_core_load_module`, `nacl_core_unload_module`, `nacl_core_get_symbol`, `nacl_core_is_module_loaded`, error functions |
+| `sensors_client` | `sensors_client.c` | `start_sensor_stream`, `stop_sensor_stream` |
+| `telephony_client` | `telephony_client.c` | `telephony_binder_get_imsi`, `telephony_jni_populate_state`, `telephony_parse_registry_dumpsys` |
+| `bluetooth_client` | `libbluetooth_client.c` | `bt_start_le_scan`, `bt_stop_le_scan`, `bt_get_discovered_devices`, `bt_get_client_version` |
+| `ipc_crypto` | `ipc_crypto.c` | `ipc_crypto_init`, `ipc_crypto_shutdown`, `ipc_secure_send`, `ipc_secure_recv` |
+| `shm_client` | `shm_client.c` | shared-memory client surface; header inventory still needs explicit public-function reconciliation |
+| `display_core` | `display.cpp` | `nacl_display_create`, `nacl_display_update_waveform_data`, `nacl_display_render_frame`, `nacl_display_destroy` |
+| `vulkan_renderer` | `vulkan_renderer.c` | `nacl_vulkan_alloc`, `nacl_vulkan_init`, `nacl_vulkan_update_vertices`, `nacl_vulkan_draw_frame`, `nacl_vulkan_recreate_swapchain`, `nacl_vulkan_shutdown`, `nacl_vulkan_free` |
+| `display_jni_bridge` | `display_jni_bridge.cpp` | JNI bridge entry points; not the same ABI as display-core functions |
+| `display_media` | `display_media.c` | `media_codec_init`, `media_codec_configure_decoder`, `media_codec_decode_packet`, `media_codec_shutdown`, `display_render_frame` |
+| `adb_client` | `adb_client.c` | `adb_initialize_session`, `adb_connect_loopback`, `adb_send_packet`, `adb_read_packet`, `adb_handle_handshake`, `adb_open_shell_channel`, `adb_write_shell_data`, `adb_read_shell_data`, `adb_close_session` |
+| `privilege_broker` | `privilege_broker.c` | `nacl_privilege_backend_available`, `nacl_privilege_capability_supported`, backend/capability naming, UID check, ping, backend query |
+| `routing_core` | `routing_core.c` | `initialize_routing_engine`, `resolve_capability_pathway`, `dispatch_hardware_command`, `routing_core_set_jvm` |
+| `usb_subsystem` | `usb_subsystem.c` | `usb_claim_interface`, `usb_release_interface` |
+| `camera_subsystem` | `camera_subsystem.c` | `camera_initialize`, `camera_open_device`, `camera_start_streaming`, `camera_stop_streaming`, `camera_close_device` |
+| `nfc_subsystem` | `nfc_subsystem.c` | `nfc_initialize`, `nfc_start_reader_mode`, `nfc_stop_reader_mode` plus JNI callback entry |
+| `nacl_input` | `input.c` | `input_init`, `input_inject_tap_adb`, `input_inject_swipe_adb`, `input_start_monitoring`, `input_stop_monitoring`, `input_shutdown` |
+| `nacl_audio` | `audio.c` | `audio_init`, playback/capture/write/stop/shutdown functions |
+| `nacl_location` | `location.c` | `location_init`, `location_start_updates`, `location_stop_updates`, `location_shutdown` |
+| `nacl_storage` | `storage.c` | `storage_init`, `storage_mmap_file`, `storage_munmap_file`, `storage_get_encryption_type` |
+| `power_battery` | `power_battery.c` | `power_init`, `power_get_battery_stats`, wakelock acquire/release, `power_shutdown` |
+| `connectivity_automation` | `connectivity_automation.c` | automation API; full public-function inventory still needs explicit header/source reconciliation |
+| `native_host_bridge` | `native_host_bridge.cpp` | native-host bootstrap/bridge surface; current lookup of `initialize_core_registry` is inconsistent with `android_core.c` |
+| `quickjs_bindings` | QuickJS binding sources | binding entry points, not a single subsystem ABI |
+
+Executables currently built by CMake: `sensors_daemon`, `bluetooth_svc`, `shm_daemon`, `privilege_broker_daemon`, and `service_daemon`.
+
+### Core seven-module registry versus actual build
+
+The implemented `NaclModuleType` registry currently contains:
+
+- CORE → `libandroid_core.so`
+- BLUETOOTH → `libbluetooth_client.so`
+- WIFI → `libwifi_client.so`
+- SENSORS → `libsensors_client.so`
+- LOCATION → `liblocation_client.so`
+- IPC → `libipc_client.so`
+- SYSTEM → `libsystem_client.so`
+
+The current CMake inventory directly confirms `android_core`, `bluetooth_client`, `sensors_client`, and `telephony_client`, but does **not** define `wifi_client`, `location_client`, `ipc_client`, or `system_client) under those names. Instead, it contains separate targets such as `nacl_location`, `ipc_crypto`, `shm_client`, and `connectivity_automation`.
+
+Therefore the seven-module registry cannot yet be treated as an authoritative map of the current build outputs.
+
+### First concrete lazy-loading slice
+
+Bluetooth remains the cleanest first implementation target:
+
+- owning CMake target: `bluetooth_client`
+- output: `libbluetooth_client.so`
+- public C surface: four functions
+- daemon/service boundary exists separately as `bluetooth_svc`
+- loading the client library does not itself imply that Bluetooth service activation is complete
+
+The intended next step is to make this mapping explicit and testable before generalizing it.
+
+### Loader design constraint recorded
+
+A resolved function pointer must not outlive its owning module. Any future unload behavior must account for active callbacks, worker threads, subsystem state, and cached function pointers. Module lifetime and subsystem activation remain separate concepts.
+
+### Remaining inventory work
+
+1. Verify exact ELF dynamic exports from CI-built artifacts rather than relying only on source declarations.
+2. Complete public-function inventory for SHM, automation, QuickJS, and JNI bridge surfaces.
+3. Map every function to its exact CMake target and runtime dependency set.
+4. Determine which current functions are intended stable ABI versus internal implementation helpers.
+5. Define canonical module IDs/paths only after the above evidence is complete.
