@@ -1200,3 +1200,51 @@ Research record:
 **Next: PHASE C — simple client libraries, beginning with `ipc_crypto`.**
 
 Do not repeat Sensors, Bluetooth, or Telephony evidence unless contradictory new evidence appears.
+
+
+## 35. IPC Crypto Resolver Slice — 2026-09-29
+
+**VERIFIED:** IPC Crypto PHASE C ELF verification is complete for the current CI ARM64 artifact.
+
+Evidence:
+- CMake owner: `ipc_crypto` from `sdk/src/ipc_crypto.c`
+- Public header: `sdk/include/ipc_crypto.h`
+- Runtime artifact: `libipc_crypto.so`
+- CI artifact: ARM64 `nacl-libs-arm64-v8a`, from the successful NACL NDK build used for this investigation
+- Dynamic exports, verified with `readelf --dyn-syms`:
+  - `ipc_crypto_init`
+  - `ipc_crypto_shutdown`
+  - `ipc_crypto_encrypt`
+  - `ipc_crypto_decrypt`
+  - `ipc_secure_send`
+  - `ipc_secure_recv`
+- ELF NEEDED:
+  - `liblog.so`
+  - `libm.so`
+  - `libdl.so`
+  - `libc.so`
+- No `libcrypto.so` ELF NEEDED dependency.
+- SONAME: `libipc_crypto.so`
+- No RPATH/RUNPATH observed.
+
+**VERIFIED:** The implementation obtains crypto functionality dynamically with `dlopen()`/`dlsym()`, rather than linking libcrypto at ELF link time. This keeps the crypto provider outside the library's DT_NEEDED dependency set.
+
+**VERIFIED:** The six dynamically exported functions form a small, explicit C ABI surface. No EVP implementation functions were dynamically exported by NACL.
+
+**INFERENCE:** IPC Crypto fits the generic module/symbol-resolution model at the library boundary, but crypto-provider availability/version compatibility is a separate runtime concern.
+
+**KNOWN LIFETIME ISSUE:** `ipc_crypto_shutdown()` closes the dynamically loaded crypto provider while cached provider function pointers remain populated. Those pointers must not be used after provider shutdown. This is currently an implementation/lifetime finding, not a justification to change native code during the research phase.
+
+**UNKNOWN / NEXT:** Determine the Android/vendor compatibility of the eleven `dlsym()` provider symbols, including symbol availability and provider ABI assumptions across supported Android environments. Also verify the exact current CI artifact provenance if a later build supersedes the artifact used here.
+
+**Classification:** The six NACL exports are **STABLE-ABI CANDIDATES**, subject to header contract, lifecycle, error semantics, and provider-compatibility review. The dynamically resolved EVP symbols are **external runtime dependencies**, not NACL public ABI.
+
+**Native implementation changes remain unauthorized.**
+
+### Current position
+
+**PHASE C — IPC Crypto ELF characterization: COMPLETE.**
+
+**Next:** IPC Crypto provider/dependency compatibility analysis, then continue to the next simple client library in the persisted sequence.
+
+Do not repeat Bluetooth, Sensors, or Telephony evidence unless contradictory new evidence appears.
