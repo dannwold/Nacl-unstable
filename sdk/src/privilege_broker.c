@@ -43,15 +43,9 @@ int nacl_privilege_backend_available(NaclPrivilegeBackend backend) {
 
 int nacl_privilege_capability_supported(NaclCapability capability) {
     switch (capability) {
-        case NACL_CAP_WIFI_SCAN:
-        case NACL_CAP_WIFI_STATE:
+        /* Only advertise capabilities that the broker daemon actually dispatches. */
         case NACL_CAP_BT_SCAN:
-        case NACL_CAP_BT_STATE:
-        case NACL_CAP_BT_PAIR:
-        case NACL_CAP_LOCATION:
-        case NACL_CAP_SENSOR_READ:
-        case NACL_CAP_BATTERY_READ:
-        case NACL_CAP_SYSTEM_PROPERTY_READ:
+        case NACL_CAP_WIFI_SCAN:
             return 1;
         default:
             return 0;
