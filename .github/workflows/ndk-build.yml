@@ -33,24 +33,23 @@ jobs:
       - name: Configure Android NDK
         run: |
           echo "=== Setting up Android NDK ==="
-          NDK_PATH=""
-          
-          if [ -n "$ANDROID_NDK_LATEST_HOME" ] && [ -f "$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" ]; then
-            NDK_PATH="$ANDROID_NDK_LATEST_HOME"
-          elif [ -n "$ANDROID_NDK_HOME" ] && [ -f "$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" ]; then
-            NDK_PATH="$ANDROID_NDK_HOME"
-          elif [ -d "/usr/local/lib/android/sdk/ndk" ]; then
-            NDK_PATH=$(find "/usr/local/lib/android/sdk/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          NDK_VERSION="25.2.9519653"
+          SDKM="/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
+          NDK_PATH="/usr/local/lib/android/sdk/ndk/$NDK_VERSION"
+
+          if [ ! -f "$NDK_PATH/build/cmake/android.toolchain.cmake" ]; then
+            echo "Installing pinned Android NDK $NDK_VERSION..."
+            if [ ! -f "$SDKM" ]; then
+              echo "sdkmanager not found: $SDKM"
+              exit 1
+            fi
+            yes | "$SDKM" --licenses
+            "$SDKM" "ndk;$NDK_VERSION" "cmake;3.22.1"
           fi
 
-          if [ -z "$NDK_PATH" ] || [ ! -f "$NDK_PATH/build/cmake/android.toolchain.cmake" ]; then
-            echo "Installing NDK via sdkmanager..."
-            SDKM="/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
-            if [ -f "$SDKM" ]; then
-              yes | $SDKM --licenses
-              $SDKM "ndk;25.2.9519653" "cmake;3.22.1"
-              NDK_PATH="/usr/local/lib/android/sdk/ndk/25.2.9519653"
-            fi
+          if [ ! -f "$NDK_PATH/build/cmake/android.toolchain.cmake" ]; then
+            echo "Pinned NDK toolchain not found: $NDK_PATH"
+            exit 1
           fi
 
           echo "Detected NDK Path: $NDK_PATH"
