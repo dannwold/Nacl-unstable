@@ -1280,3 +1280,50 @@ Research record:
 **Next:** PHASE C simple client sequence continues with `adb_client`, then `privilege_broker`, `usb_subsystem`, `nfc_subsystem`, `nacl_location`, `power_battery`, and `nacl_storage`.
 
 Do not repeat IPC Crypto ELF/provider evidence unless contradictory new evidence appears.
+
+
+### 37. ADB Client Resolver Slice Completed — 2026-09-29
+
+**VERIFIED:** `adb_client` has been characterized from current repository source/header and the ARM64 CI artifact.
+
+Evidence:
+- CMake owner: `adb_client` from `sdk/src/adb_client.c`
+- Runtime artifact: `libadb_client.so`
+- Artifact inspected: ARM64 artifact ID `11046608330`
+- Dynamic exports: exactly nine:
+  - `adb_initialize_session`
+  - `adb_connect_loopback`
+  - `adb_send_packet`
+  - `adb_read_packet`
+  - `adb_handle_handshake`
+  - `adb_open_shell_channel`
+  - `adb_write_shell_data`
+  - `adb_read_shell_data`
+  - `adb_close_session`
+- ELF NEEDED: `liblog.so`, `libm.so`, `libdl.so`, `libc.so`
+- SONAME: `libadb_client.so`
+- No RPATH/RUNPATH.
+- No `libcrypto.so` DT_NEEDED dependency.
+
+**VERIFIED:** ADB activation is separate from library loading. The client initializes an `AdbSession`, connects to `127.0.0.1:<port>`, performs an ADB handshake, and then opens a shell channel.
+
+**VERIFIED:** ADB authentication dynamically loads `libcrypto.so` and resolves ten provider functions. Provider compatibility remains **UNKNOWN** across supported Android/vendor environments.
+
+**INFERENCE:** The nine NACL functions are stable-ABI candidates, but the exposed `AdbSession` structure makes session state part of the public ABI rather than providing an opaque handle.
+
+**VERIFIED:** The current transport implementation treats short header/payload `write()` operations as errors and does not complete partial writes. `adb_read_packet()` similarly rejects a short header read rather than filling it.
+
+**INFERENCE:** The generic module/symbol resolver can load and resolve `libadb_client.so`, but a higher-level adapter is needed for endpoint availability, authentication/provider compatibility, session lifetime, and capability/security status.
+
+Research record:
+- `research/adb-client-resolver.md`
+
+**Native implementation changes remain unauthorized.**
+
+### Current position
+
+**PHASE C — `adb_client`: COMPLETE.**
+
+**Next:** `privilege_broker`.
+
+Do not repeat IPC Crypto or ADB evidence unless contradictory new evidence appears.
