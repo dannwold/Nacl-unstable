@@ -3,8 +3,20 @@ name: Android NDK Multi-ABI Compiler
 on:
   push:
     branches: [ "main", "master", "dev", "develop" ]
+    paths:
+      - "sdk/**"
+      - "host_app/app/src/main/cpp/**"
+      - "CMakeLists.txt"
+      - "sdk/CMakeLists.txt"
+      - ".github/workflows/ndk-build.yml"
   pull_request:
     branches: [ "main", "master" ]
+    paths:
+      - "sdk/**"
+      - "host_app/app/src/main/cpp/**"
+      - "CMakeLists.txt"
+      - "sdk/CMakeLists.txt"
+      - ".github/workflows/ndk-build.yml"
   workflow_dispatch:
 
 jobs:
@@ -64,7 +76,7 @@ jobs:
         run: |
           echo "Compiling native libraries for ABI: ${{ matrix.abi }}"
           echo "Using toolchain: $NDK_TOOLCHAIN"
-          
+
           cmake -S sdk -B build_${{ matrix.abi }} \
             -DCMAKE_TOOLCHAIN_FILE="$NDK_TOOLCHAIN" \
             -DANDROID_ABI="${{ matrix.abi }}" \
@@ -73,18 +85,16 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_FLAGS="-D_GNU_SOURCE" \
             -DCMAKE_CXX_FLAGS="-D_GNU_SOURCE"
-            
+
           cmake --build build_${{ matrix.abi }} --config Release -j$(nproc)
 
       - name: Stage ABI Artifacts
         run: |
           mkdir -p dist/jniLibs/${{ matrix.abi }}
           mkdir -p dist/bin/${{ matrix.abi }}
-          
-          # Copy all generated .so files into standard Android jniLibs folder
+
           cp build_${{ matrix.abi }}/lib/*.so dist/jniLibs/${{ matrix.abi }}/ 2>/dev/null || cp build_${{ matrix.abi }}/*.so dist/jniLibs/${{ matrix.abi }}/ || true
-          
-          # Copy standalone service daemons and executables
+
           cp build_${{ matrix.abi }}/bin/* dist/bin/${{ matrix.abi }}/ 2>/dev/null || true
 
       - name: Upload Single ABI Artifact
@@ -110,11 +120,9 @@ jobs:
         run: |
           mkdir -p nacl-sdk-release/jniLibs
           mkdir -p nacl-sdk-release/bin
-          
-          # Copy headers
+
           cp -r sdk/include nacl-sdk-release/include
-          
-          # Merge ABI jniLibs and binaries
+
           for abi in arm64-v8a armeabi-v7a x86_64 x86; do
             if [ -d "staged_artifacts/nacl-libs-$abi/jniLibs/$abi" ]; then
               mkdir -p "nacl-sdk-release/jniLibs/$abi"
