@@ -1166,3 +1166,37 @@ Research record:
 **Next: PHASE B — Telephony.**
 
 Do not repeat Sensors or Bluetooth evidence unless contradictory new evidence appears.
+
+
+## 34. Telephony Resolver Slice Completed — 2026-09-29
+
+**VERIFIED:** Telephony PHASE B is complete.
+
+Evidence:
+- CMake owner: `telephony_client` from `sdk/src/telephony_client.c`
+- Runtime artifact: `libtelephony_client.so`
+- CI artifact: Run #53 / ID `36598137213`, arm64-v8a artifact ID `11046608330`
+- Dynamic exports: exactly `telephony_binder_get_imsi`, `telephony_jni_populate_state`, and `telephony_parse_registry_dumpsys`
+- ELF NEEDED: `liblog.so`, `libm.so`, `libdl.so`, `libc.so`
+- No NACL-internal ELF NEEDED dependency
+
+Important ABI findings:
+- `telephony_binder_get_imsi` is currently a placeholder that copies a hard-coded IMSI-like string; it does not perform Binder access.
+- `telephony_jni_populate_state` depends on cached JNI state that this library does not expose an initialization function for; its real telephony access is therefore incomplete from this module alone.
+- `telephony_parse_registry_dumpsys` is a local parser and is the clearest current stable-ABI candidate, subject to a proper public prototype/contract.
+- Dynamic export presence must not automatically imply stable public ABI.
+
+Research record:
+- `research/telephony-resolver.md` created with the complete evidence and ABI classifications.
+
+**INFERENCE:** The eventual resolver registry needs explicit ABI classification so placeholders/incomplete integrations cannot become stable API merely because they are dynamically exported.
+
+**Native implementation changes remain unauthorized.**
+
+### Current position
+
+**PHASE B — Telephony: COMPLETE.**
+
+**Next: PHASE C — simple client libraries, beginning with `ipc_crypto`.**
+
+Do not repeat Sensors, Bluetooth, or Telephony evidence unless contradictory new evidence appears.
