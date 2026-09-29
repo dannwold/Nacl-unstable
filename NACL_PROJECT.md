@@ -1370,3 +1370,53 @@ Research record:
 **Next:** `usb_subsystem`.
 
 Do not repeat prior completed resolver slices unless contradictory evidence appears.
+
+### 39. USB Subsystem Resolver Slice Completed — 2026-09-29
+
+**VERIFIED:** USB PHASE C slice is complete from current repository source/header, CMake configuration, and the current ARM64 CI ELF artifact.
+
+Evidence:
+- CMake owner: `usb_subsystem` from `sdk/src/usb_subsystem.c`
+- Public header: `sdk/include/usb_subsystem.h`
+- Runtime artifact: `libusb_subsystem.so`
+- CI artifact: ARM64 `nacl-libs-arm64-v8a`, artifact ID `11046608330`, from workflow run ID `36598137213`
+- Dynamic exports: exactly five:
+  - `usb_claim_interface`
+  - `usb_release_interface`
+  - `usb_control_transfer`
+  - `usb_bulk_write`
+  - `usb_bulk_read`
+- ELF NEEDED:
+  - `liblog.so`
+  - `libm.so`
+  - `libdl.so`
+  - `libc.so`
+- SONAME: `libusb_subsystem.so`
+- No RPATH/RUNPATH observed.
+- No NACL-internal DT_NEEDED dependency.
+
+**VERIFIED:** The USB library operates directly on a file descriptor supplied by the caller. `UsbDeviceContext.device_fd` is documented as a descriptor passed from Android `UsbDeviceConnection`. The implementation uses Linux `usbdevfs` ioctls for interface claim/release, control transfer, and bulk I/O.
+
+**VERIFIED:** Library loading does not open or discover a USB device. Capability activation requires a valid USB device file descriptor supplied by the host and appropriate Android/kernel access to that descriptor.
+
+**VERIFIED:** `usb_claim_interface()` attempts `USBDEVFS_DISCONNECT` before `USBDEVFS_CLAIMINTERFACE`. The disconnect result is ignored; claim failure returns `USB_ERR_TRANSFER`.
+
+**VERIFIED:** The public ABI exposes packed structures `UsbControlSetup` and `UsbDeviceContext`. This makes field layout and packing part of the public ABI contract. `UsbDeviceContext` also contains a process-local file descriptor, so it is not a portable serialized handle.
+
+**INFERENCE:** All five dynamic exports are **STABLE-ABI C CANDIDATES**, but the struct-layout contract, error-code semantics, fd ownership, and caller/device lifecycle must be explicitly documented before finalizing the ABI.
+
+**VERIFIED:** The library itself does not request Android USB permission, create the device fd, enumerate devices, or perform Java `UsbDeviceConnection` management. Those operations belong outside this module.
+
+**UNKNOWN:** The repository does not establish the exact host-side Android permission/enumeration flow that supplies the fd, nor the device/kernel policy for all target Android environments. Actual USB access remains Android permission-, descriptor-, kernel-, and device-dependent.
+
+**INFERENCE:** The generic module/symbol resolver can load and resolve `libusb_subsystem.so`, but USB capability activation should be represented separately as a host/device-fd lifecycle. No daemon or NACL IPC endpoint is required by the current USB client implementation.
+
+**Native implementation changes remain unauthorized.**
+
+### Current position
+
+**PHASE C — `usb_subsystem`: COMPLETE.**
+
+**Next:** `nfc_subsystem`.
+
+Do not repeat completed USB, privilege-broker, ADB, IPC Crypto, Sensors, Bluetooth, or Telephony evidence unless contradictory new evidence appears.
