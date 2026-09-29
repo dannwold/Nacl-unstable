@@ -1,5 +1,5 @@
 #include "nacl_privilege_broker.h"
-#include "bluetooth_ipc_common.h"
+#include "bluetooth_client.h"
 
 #include <errno.h>
 #include <stdio.h>
