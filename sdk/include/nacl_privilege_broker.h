@@ -56,6 +56,17 @@ const char *nacl_privilege_backend_name(NaclPrivilegeBackend backend);
 const char *nacl_privilege_capability_name(NaclCapability capability);
 int nacl_privilege_broker_is_uid2000(void);
 
+/* Client-side broker transport. Returns a negative StatusCode on failure. */
+int nacl_privilege_broker_ping(void);
+int nacl_privilege_broker_get_backend(NaclPrivilegeBackend *backend);
+int nacl_privilege_broker_dispatch(NaclCapability capability,
+                                    NaclPrivilegeBackend backend,
+                                    uint32_t command,
+                                    const void *payload,
+                                    uint32_t payload_len,
+                                    void *response,
+                                    uint32_t *response_len);
+
 #ifdef __cplusplus
 }
 #endif
