@@ -991,3 +991,147 @@ These records preserve the current architecture audit, loader/ABI findings, corr
 **Current repository HEAD:** `6d745b642ff5c042b80fa294b991c23f9df965b3`
 
 The next checkpoint should occur after the next substantial evidence influx, not after every individual observation.
+
+
+## 32. Exact Continuation Protocol — 2026-09-29
+
+This section is an execution map for the next NACL investigation pass. It exists specifically to prevent the investigation from resetting to an already-completed phase after a context interruption.
+
+### Current position — DO NOT RESTART
+
+**Completed:** Bluetooth is the first fully characterized resolver slice.
+
+Bluetooth evidence already established:
+- owning target: `bluetooth_client`
+- runtime library: `libbluetooth_client.so`
+- dynamic ABI: exactly four intended public functions
+  - `bt_start_le_scan`
+  - `bt_stop_le_scan`
+  - `bt_get_discovered_devices`
+  - `bt_get_client_version`
+- ELF NEEDED dependencies: `liblog.so`, `libm.so`, `libdl.so`, `libc.so`
+- runtime service dependency: `/data/local/tmp/sdk/sockets/bluetooth.sock`
+- loading the client library is distinct from activating/using the Bluetooth service
+- no native implementation change has been authorized
+
+**Do not repeat:** repository-wide export inspection, Bluetooth export inspection, or the basic Bluetooth resolver characterization unless new evidence contradicts it.
+
+### Exact next sequence
+
+Execute these phases in order. Finish a phase before advancing unless a dependency is discovered that requires branching.
+
+**PHASE A — Sensors resolver slice**
+1. Inspect the current `sensors_client` public header/source and its CMake target.
+2. Verify its actual dynamic exports from a current CI-built ELF artifact. Do not substitute regular ELF symbols for dynamic exports.
+3. Record exact ELF NEEDED dependencies.
+4. Trace its runtime IPC endpoint and identify what starts/activates the sensor stream.
+5. Identify callback/thread/session lifetime requirements.
+6. Classify each observed function as STABLE-ABI CANDIDATE, INTERNAL, or UNKNOWN.
+7. Compare the evidence against the existing project/research records; correct stale claims instead of duplicating them.
+
+**PHASE B — Telephony resolver slice**
+Only after Sensors is complete, repeat the same evidence sequence for `telephony_client`.
+
+**PHASE C — Remaining simple client libraries**
+Then process the remaining comparatively small C ABIs in this order unless evidence gives a concrete reason to change it:
+1. `ipc_crypto`
+2. `adb_client`
+3. `privilege_broker`
+4. `usb_subsystem`
+5. `nfc_subsystem`
+6. `nacl_location`
+7. `power_battery`
+8. `nacl_storage`
+
+**PHASE D — Complex/dependency-heavy modules**
+After the simple slices, investigate:
+- `display_core`
+- `vulkan_renderer`
+- `display_media`
+- `camera_subsystem`
+- `nacl_audio`
+- `nacl_input`
+- `routing_core`
+- `connectivity_automation`
+- QuickJS bindings
+- JNI/native-host bridge
+- SHM client/daemon
+
+These must not automatically be treated as ordinary leaf resolver modules because their dependency, runtime, callback, JNI, or process boundaries may require different lifetime/activation rules.
+
+### Required evidence record for EVERY resolver slice
+
+Do not mark a slice complete until all of these are answered:
+
+1. **Build owner:** exact CMake target and source file(s).
+2. **Runtime artifact:** exact `.so` name.
+3. **Dynamic ABI:** exact dynamically exported symbols, verified from the built artifact.
+4. **Header ABI:** exact public declarations and signatures.
+5. **Dependency set:** ELF NEEDED libraries and NACL-internal dependencies.
+6. **Activation boundary:** what must happen after `dlopen/dlsym` for the capability to actually work.
+7. **IPC/device boundary:** socket, Binder, HAL, ioctl, device, daemon, etc., where applicable.
+8. **Lifetime:** objects, callbacks, threads, file descriptors, and conditions that prohibit safe unload.
+9. **Availability/security:** ordinary-app, permission-dependent, privilege-dependent, hardware-dependent, backend-dependent, or unavailable where evidence supports it.
+10. **ABI classification:** stable candidate / internal / unknown, with evidence.
+11. **Resolver implication:** whether the module can use the same generic resolver model or needs a special activation/lifetime adapter.
+12. **Contradictions:** anything in existing documentation/project state that disagrees with current repository/artifact evidence.
+
+### Evidence hierarchy
+
+When sources disagree, use this order unless there is a specific reason not to:
+
+1. current repository source/build configuration
+2. current CI-built ELF artifact
+3. tests/runtime observations
+4. current research evidence
+5. `NACL_PROJECT.md` historical/project-state claims
+6. older PDFs/documentation
+
+A project document is a checkpoint, **not proof**. Never force new evidence to agree with the MD.
+
+### Classification discipline
+
+Use these labels explicitly:
+- **VERIFIED** — directly established from source, build, artifact, test, or runtime evidence.
+- **INFERENCE** — reasoned consequence of verified evidence.
+- **PROPOSAL** — design choice not yet implemented/verified.
+- **UNKNOWN** — requires evidence.
+
+Never silently convert an INFERENCE or PROPOSAL into VERIFIED.
+
+### Information-influx checkpoint
+
+After completing a resolver slice, or sooner if a large amount of evidence accumulates:
+1. persist the findings in the appropriate `research/` file;
+2. update this MD with only the durable state needed to resume;
+3. record current HEAD and the exact phase completed;
+4. record the next phase explicitly;
+5. only then continue to additional evidence gathering.
+
+If a context interruption occurs, resume from the last persisted **CURRENT POSITION** rather than starting the audit over.
+
+### Loop-break rule
+
+Before starting any investigation step, ask internally: **Has this exact evidence already been verified and persisted?**
+
+- If YES: do not repeat it. Advance to the next uncompleted item.
+- If NO: investigate it.
+- If contradictory new evidence appears: reopen the item and record the correction.
+
+If the state appears to demand repeating an already-completed phase, stop and present:
+
+**LOOP DETECTED** — completed evidence, attempted repeat, new information (if any), and proposed next step.
+
+Ask the user whether to break the loop with **YES / NO** before proceeding.
+
+### Implementation gate
+
+Until all planned resolver slices have been characterized and the cross-module ABI map is stable:
+
+**Native implementation changes remain unauthorized.**
+
+Research/documentation updates are authorized for continuity. Implementation may begin only after the resolver ABI design is explicitly presented and approved.
+
+### Immediate next action
+
+**Continue at PHASE A: Sensors.** Do not return to Bluetooth, general ELF export discovery, or repository-wide inventory unless new contradictory evidence requires reopening them.
