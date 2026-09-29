@@ -1,6 +1,7 @@
 #include "nacl_privilege_broker.h"
 
 #include <unistd.h>
+#include <stdlib.h>
 
 const char *nacl_privilege_backend_name(NaclPrivilegeBackend backend) {
     switch (backend) {
@@ -200,14 +201,31 @@ int nacl_privilege_broker_dispatch(NaclCapability capability,
     request.backend = (uint32_t)backend;
     request.command = command;
 
+    if (payload_len > NACL_PRIVILEGE_BROKER_MAX_PAYLOAD - sizeof(request) - sizeof(uint32_t)) {
+        return STATUS_ERROR;
+    }
+
     /*
-     * The payload is currently represented by the fixed broker request.
-     * Capability-specific payload/result schemas will be added per capability;
-     * arbitrary shell strings are never sent through this API.
+     * The envelope carries a fixed capability request followed by
+     * capability-specific binary data. The broker never accepts shell text
+     * or an executable command string from the caller.
      */
-    (void)payload;
-    (void)payload_len;
-    return broker_request(NACL_BROKER_DISPATCH,
-                          &request, sizeof(request),
-                          response, response_len);
+    uint32_t envelope_len = (uint32_t)sizeof(request) + sizeof(uint32_t) + payload_len;
+    uint8_t *envelope = (uint8_t *)malloc(envelope_len);
+    if (!envelope) return STATUS_ERROR;
+
+    memcpy(envelope, &request, sizeof(request));
+    memcpy(envelope + sizeof(request), &payload_len, sizeof(payload_len));
+    if (payload_len > 0 && payload) {
+        memcpy(envelope + sizeof(request) + sizeof(payload_len), payload, payload_len);
+    } else if (payload_len > 0) {
+        free(envelope);
+        return STATUS_ERROR;
+    }
+
+    int rc = broker_request(NACL_BROKER_DISPATCH,
+                            envelope, envelope_len,
+                            response, response_len);
+    free(envelope);
+    return rc;
 }
