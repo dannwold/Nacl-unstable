@@ -902,3 +902,76 @@ The previous section's claims about incidental helper exports should be interpre
 
 ---
 **Export verification method:** `nm -D --defined-only` / `readelf --dyn-syms` against CI Run #36 arm64-v8a artifact.
+## 30. Information-Preservation Checkpoint Protocol — 2026-09-29
+
+This repository is also the continuity/checkpoint mechanism for long investigations, including work that may be interrupted by Free-tier context or session limits.
+
+### Mandatory checkpoint check
+
+Before continuing a substantial investigation, implementation-planning batch, or tool-heavy sequence, check whether the newly accumulated information is already persisted in the repository.
+
+A checkpoint is required when **any** of these conditions is met:
+
+1. **Information influx:** several new verified findings, source files, symbols, test results, or architectural decisions have accumulated.
+2. **Context risk:** the conversation is becoming large enough that a session/context interruption could cause loss of working state.
+3. **Phase transition:** the work is moving from one research/analysis phase to another.
+4. **Before implementation:** verified findings and the proposed change must be persisted before source changes begin.
+5. **Before a potentially fragile tool sequence:** preserve the current evidence before continuing if failure could otherwise lose the working state.
+6. **User requests a checkpoint:** persist immediately.
+
+### What to checkpoint
+
+The checkpoint does not need to contain every conversational detail. It must preserve the information required to resume accurately:
+
+- verified facts/evidence
+- important discoveries and corrections
+- current repository HEAD/branch
+- files/artifacts inspected
+- decisions and their status
+- unresolved questions/unknowns
+- current task/phase
+- next intended action
+- explicit no-code-change or authorized-change boundary
+
+Use `VERIFIED`, `INFERENCE`, `PROPOSAL`, and `UNKNOWN` labels where appropriate.
+
+### Checkpoint rule
+
+**Never allow a large influx of new project information to exist only in the conversation when it can be persisted to the repository.**
+
+When a checkpoint is triggered, update `NACL_PROJECT.md` and/or the appropriate `research/` document before continuing with more context-heavy work.
+
+### Interruption recovery
+
+After an interruption or new conversation:
+
+1. Read `NACL_PROJECT.md`.
+2. Read the relevant `research/` files.
+3. Verify the repository HEAD against GitHub/source state.
+4. Continue from the persisted checkpoint rather than relying on remembered conversation state.
+
+`NACL_PROJECT.md` remains project-state/context, **not implementation proof**. Actual repository contents and verified artifacts outrank it.
+
+### Loop protection
+
+If persisted state and the current task appear to be causing repetitive work, stop and report:
+
+LOOP DETECTED:
+- What appears to be repeating
+- What has already been verified
+- What would change if we continue
+- Recommended next action
+
+Then ask whether to break the loop:
+
+**Break the loop and proceed with the new evidence? YES / NO**
+
+Do not silently repeat an already-verified investigation.
+
+### Current checkpoint
+
+- Repository HEAD at this checkpoint: `1f34b7b1a747ffd2dc9ef74887d220a3a787c4bc`
+- Current phase: repository architecture/evidence consolidation
+- Native source changes authorized: **NO**
+- Documentation/research updates authorized: **YES**
+- Immediate technical focus: authoritative module/function inventory and loader-ABI design
