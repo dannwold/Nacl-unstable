@@ -6,80 +6,146 @@ Branch: main
 
 ## Status
 
-**PARTIAL — source/runtime characterization complete; built-ELF dynamic export verification remains UNKNOWN.**
+**COMPLETE for the planned resolver evidence slice.** Source/runtime characterization and current CI-built ELF dynamic export/dependency verification are now established.
 
 ## VERIFIED
 
 ### Build target
 
-sdk/CMakeLists.txt defines:
-- sensors_client as a shared library built from src/sensors_client.c.
-- sensors_daemon as an executable built from src/sensors_daemon.c.
-- sensors_client links only the log library in the current CMake configuration.
+`sdk/CMakeLists.txt` defines:
+- `sensors_client` as a shared library built from `src/sensors_client.c`.
+- `sensors_daemon` as an executable built from `src/sensors_daemon.c`.
+- `sensors_client` links the log library in the current CMake configuration.
 
-### Client public symbols visible in source
+### Client public source ABI
 
-sdk/src/sensors_client.c marks these two functions with visibility("default"):
-- start_sensor_stream(SensorCallback callback)
-- stop_sensor_stream(SensorClientSession *session)
+`sdk/src/sensors_client.c` marks these two functions with `visibility("default")`:
+- `start_sensor_stream(SensorCallback callback)`
+- `stop_sensor_stream(SensorClientSession *session)`
 
-The callback type is a function pointer taking const SensorDataEvent *.
-SensorClientSession is an internal struct in the source and is not exposed through a public header declaration.
+The callback type takes `const SensorDataEvent *`.
 
-This establishes intended public source-level exports, but does not yet prove the final dynamic ELF export set.
+`SensorClientSession` is an internal struct and is not exposed as a public struct declaration.
+
+### Actual CI-built dynamic ABI
+
+Artifact inspected:
+- Workflow: Android NDK Multi-ABI Compiler
+- Run: #53
+- Run ID: `36598137213`
+- Commit: `edfb8013595f0c64a2cd80c9e080dfbea4529b59`
+- Artifact: `nacl-libs-arm64-v8a`
+- Artifact ID: `11046608330`
+- Runtime library: `jniLibs/arm64-v8a/libsensors_client.so`
+
+Dynamic-symbol inspection used `nm -D --defined-only` / `readelf -Ws` cross-check.
+
+The actual dynamic exports are exactly:
+- `start_sensor_stream`
+- `stop_sensor_stream`
+
+No additional regular/static symbol is being mistaken for a runtime dynamic export.
+
+### ELF NEEDED dependencies
+
+The current arm64-v8a `libsensors_client.so` declares:
+- `liblog.so`
+- `libm.so`
+- `libdl.so`
+- `libc.so`
+
+No NACL-internal shared library is declared as an ELF NEEDED dependency.
 
 ### IPC boundary
 
-sdk/include/sensor_ipc_common.h defines:
-- socket directory: /data/local/tmp/sdk/sockets
-- sensor socket: /data/local/tmp/sdk/sockets/sensors.sock
-- subsystem: SUBSYSTEM_SENSORS = 3
+`sdk/include/sensor_ipc_common.h` defines:
+- socket directory: `/data/local/tmp/sdk/sockets`
+- sensor socket: `/data/local/tmp/sdk/sockets/sensors.sock`
+- subsystem: `SUBSYSTEM_SENSORS = 3`
 - commands: start 400, stop 401, get capabilities 402
-- packed IpcHeader
-- packed SensorDataEvent
+- packed `IpcHeader`
+- packed `SensorDataEvent`
 
 The client connects to the Unix-domain socket, sends a start request, waits for an ACK, then starts a pthread listener.
 
 ### Activation boundary
 
-Loading/resolving sensors_client does not itself activate the sensor hardware. start_sensor_stream() connects to the daemon and sends CMD_SENSORS_START_STREAM.
+Loading/resolving `libsensors_client.so` does **not** itself activate sensor hardware.
 
-The daemon then enables the accelerometer through Android native sensor APIs and sets a 50 Hz rate. The daemon multiplexes the Unix socket server and sensor event queue using epoll.
+`start_sensor_stream()` activates the client-side session by connecting to the daemon and sending `CMD_SENSORS_START_STREAM`.
+
+The daemon then:
+- obtains the Android sensor manager;
+- selects the default accelerometer;
+- creates an Android looper/event queue;
+- resolves `ASensorEventQueue_getFd` from `libandroid.so`;
+- enables the accelerometer;
+- requests a 20,000 microsecond event period (50 Hz);
+- multiplexes client sockets and the sensor event queue with epoll;
+- broadcasts sensor events to registered streaming clients.
 
 ### Lifetime
 
-The client allocates a SensorClientSession, owns a socket and pthread, and retains the callback pointer. stop_sensor_stream() sends the stop command, closes the socket, joins the listener thread, and frees the session.
+The client session owns:
+- Unix socket;
+- listener pthread;
+- callback pointer;
+- session allocation.
 
-Therefore a generic resolver must not treat the function pointer alone as the lifetime of the capability. A higher-level sensor session owns resources beyond symbol resolution.
+`stop_sensor_stream()` sends the stop request, closes the socket, joins the listener thread, and frees the session.
 
-### Runtime dependencies
+Therefore a resolved function pointer must not be treated as equivalent to a live sensor capability session. A resolver/lifecycle integration layer must keep module lifetime and capability-session lifetime distinct.
 
-The daemon directly uses Android sensor/looper APIs and dynamically opens libandroid.so to resolve ASensorEventQueue_getFd.
+### Availability/security boundary
 
-The client source itself uses POSIX socket/pthread/memory APIs. Current CMake links only log for the client target.
+The daemon and its Unix socket are a separate activation/security boundary. Source evidence does not establish that an ordinary application UID can create/run the daemon or access `/data/local/tmp/sdk/sockets/sensors.sock` on a stock Android device.
+
+The Android sensor APIs are reached by the daemon process, not directly by `libsensors_client.so`.
+
+### ABI classification
+
+- `start_sensor_stream`: **STABLE-ABI CANDIDATE**, because it is explicitly exported, has an explicit C declaration, and is part of the current built client ABI. Long-term stability is not yet contractually established.
+- `stop_sensor_stream`: **STABLE-ABI CANDIDATE**, for the same evidence.
+- `SensorClientSession`: **INTERNAL/OPAQUE**, because its structure is private to the implementation.
+- Sensor IPC wire structures: **UNKNOWN for long-term stable ABI** because they are packed and currently lack a demonstrated version-negotiation scheme.
+
+### Resolver implication
+
+Sensors can use the same generic module/symbol resolution mechanism for its two exported client functions.
+
+However, the capability still requires a sensor-specific activation/lifetime adapter because:
+- activation occurs through a daemon;
+- a session owns a socket and pthread;
+- callback lifetime matters;
+- hardware streaming is separate from library loading.
+
+The resolver should therefore resolve functions, while a higher-level capability/session layer manages activation and teardown.
 
 ## INFERENCE
 
-1. Sensors should be represented as module loading + separate capability activation/session lifecycle, not as a simple dlopen/dlsym operation.
-2. The generic resolver can likely resolve the two intended client functions, but a sensor-specific lifecycle adapter is needed if the public NACL API is expected to manage sessions safely.
-3. The daemon is a separate activation boundary and security/availability boundary; its existence does not imply that an ordinary application can start it or access its socket.
+1. Sensors are a good example of why NACL must keep library loading, symbol resolution, and capability activation as separate states.
+2. The absence of NACL-internal ELF NEEDED dependencies makes the client library itself a relatively simple leaf resolver target.
+3. The daemon boundary may impose availability/security restrictions independent of whether the client library successfully loads and resolves.
+4. Safe unload cannot be inferred merely from successful symbol resolution; active sessions and callback/listener state must be considered.
 
 ## UNKNOWN
 
-1. Exact dynamic export table of the current CI-built libsensors_client.so.
-2. Exact ELF NEEDED list of the current built client artifact.
-3. Whether the current daemon is actually deployable/runnable under the intended Android UID/SELinux context.
-4. Whether the hard-coded /data/local/tmp/sdk/sockets endpoint is accessible to the intended application/daemon arrangement on a real target.
-5. Whether the packed wire structures are sufficiently versioned/portable for the long-term public IPC ABI.
-6. Whether partial socket reads/writes are correctly handled under all conditions; current source assumes full struct reads/writes in several places.
+1. Whether the daemon is deployable/runnable under the intended Android UID/SELinux context.
+2. Whether the hard-coded socket path is accessible to the intended application/daemon arrangement on a real target.
+3. Whether partial socket reads/writes are robust under all conditions; several source paths assume complete struct transfers.
+4. Whether the packed IPC structures are suitable as a long-term cross-version public protocol.
+5. Whether the two exported functions are intended as a permanent stable ABI contract rather than the current implementation surface.
 
-## Resolver consequence
+## Resolver conclusion
 
-**Do not mark Sensors complete yet.** The missing artifact verification is specifically the dynamic export table and NEEDED dependencies. Once those are verified, proceed to Telephony.
+**Sensors is complete for the current planned resolver characterization.**
+
+The artifact evidence now proves the two dynamic exports and exact ELF NEEDED set. Proceed to **PHASE B — Telephony**.
 
 ## Evidence
 
-- sdk/CMakeLists.txt
-- sdk/src/sensors_client.c
-- sdk/src/sensors_daemon.c
-- sdk/include/sensor_ipc_common.h
+- `sdk/CMakeLists.txt`
+- `sdk/src/sensors_client.c`
+- `sdk/src/sensors_daemon.c`
+- `sdk/include/sensor_ipc_common.h`
+- CI Run #53 / arm64-v8a artifact `nacl-libs-arm64-v8a`
