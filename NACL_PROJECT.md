@@ -975,3 +975,19 @@ Do not silently repeat an already-verified investigation.
 - Native source changes authorized: **NO**
 - Documentation/research updates authorized: **YES**
 - Immediate technical focus: authoritative module/function inventory and loader-ABI design
+
+## 31. Research checkpoint — 2026-09-29
+
+The research tree is now established as the durable detailed-evidence layer.
+
+Created:
+- `research/README.md`
+- `research/architecture/current-audit.md`
+- `research/architecture/loader-and-abi.md`
+- `research/validation/elf-exports.md`
+
+These records preserve the current architecture audit, loader/ABI findings, corrected ELF-export methodology, and interruption-recovery context.
+
+**Current repository HEAD:** `6d745b642ff5c042b80fa294b991c23f9df965b3`
+
+The next checkpoint should occur after the next substantial evidence influx, not after every individual observation.
