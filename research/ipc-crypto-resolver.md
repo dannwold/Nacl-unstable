@@ -81,3 +81,56 @@ Next investigation should establish:
 ## Implementation boundary
 
 **Native implementation changes remain unauthorized.**
+
+
+## Provider Compatibility Analysis — 2026-09-29
+
+**VERIFIED:** The current implementation resolves eleven external crypto-provider symbols at runtime:
+- EVP_CIPHER_CTX_new
+- EVP_CIPHER_CTX_free
+- EVP_aes_256_gcm
+- EVP_EncryptInit_ex
+- EVP_EncryptUpdate
+- EVP_EncryptFinal_ex
+- EVP_DecryptInit_ex
+- EVP_DecryptUpdate
+- EVP_DecryptFinal_ex
+- EVP_CIPHER_CTX_ctrl
+- RAND_bytes
+
+**VERIFIED:** The implementation attempts provider loading in this order:
+1. `libcrypto.so`
+2. `/system/lib64/libcrypto.so`
+3. `/system/lib/libcrypto.so`
+
+**INFERENCE:** These paths/names are implementation assumptions, not evidence that an ordinary application on every supported Android release can access a compatible provider. The repository contains no provider compatibility matrix, bundled provider, or NACL adapter establishing that assumption.
+
+**UNKNOWN:** Provider symbol availability and ABI compatibility across the supported Android/vendor population have not been established by repository evidence.
+
+**VERIFIED:** Provider loading and symbol resolution failure return errors from `ipc_crypto_init()`; there is currently no explicit NACL capability-status classification in this interface for distinguishing missing provider, inaccessible provider, incompatible provider, or individual missing symbol.
+
+**VERIFIED:** The public NACL library has no DT_NEEDED dependency on `libcrypto.so`; the provider is intentionally a runtime dependency.
+
+**VERIFIED:** Current source contains a documentation mismatch: `docs/subsystem-crypto.md` contains a stale copied implementation with `bridge->EVP_EVP_EncryptUpdate`, while the actual current `sdk/src/ipc_crypto.c` uses `bridge->EVP_EncryptUpdate`. Repository source/build configuration outranks the stale documentation copy.
+
+**VERIFIED:** `ipc_secure_send()` uses one `send()` call for each frame and ciphertext payload. On a stream socket, a short write is possible; the current function reports an error rather than completing the write.
+
+**INFERENCE:** The eventual NACL crypto capability should separate:
+- module loading;
+- provider/backend selection and compatibility;
+- provider lifetime;
+- cryptographic session activation;
+- socket framing/transport.
+
+**PROPOSAL:** Treat provider compatibility as a backend/availability layer rather than making a particular Android `libcrypto.so` path part of the generic resolver contract.
+
+**Native implementation changes remain unauthorized.**
+
+## PHASE C Checkpoint
+
+**PHASE C — IPC Crypto: COMPLETE.**
+
+ELF characterization and provider/dependency compatibility review are complete to the level supported by current repository evidence.
+
+**Next:** `adb_client`, followed by `privilege_broker`, `usb_subsystem`, `nfc_subsystem`, `nacl_location`, `power_battery`, and `nacl_storage`.
+
