@@ -167,14 +167,10 @@ int nacl_privilege_broker_ping(void) {
 int nacl_privilege_broker_get_backend(NaclPrivilegeBackend *backend) {
     if (!backend) return STATUS_ERROR;
 
-    NaclBrokerRequest request;
-    memset(&request, 0, sizeof(request));
-    request.protocol_version = NACL_PRIVILEGE_BROKER_PROTOCOL_VERSION;
-
     NaclBrokerResponse response;
     uint32_t response_len = sizeof(response);
     int rc = broker_request(NACL_BROKER_GET_BACKEND,
-                            &request, sizeof(request),
+                            NULL, 0,
                             &response, &response_len);
     if (rc == STATUS_OK && response_len == sizeof(response))
         *backend = (NaclPrivilegeBackend)response.backend;
