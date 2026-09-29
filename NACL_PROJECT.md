@@ -1327,3 +1327,46 @@ Research record:
 **Next:** `privilege_broker`.
 
 Do not repeat IPC Crypto or ADB evidence unless contradictory new evidence appears.
+
+
+### 38. Privilege Broker Resolver Slice Completed — 2026-09-29
+
+**VERIFIED:** `libprivilege_broker.so` was characterized from current source/header and the ARM64 CI artifact.
+
+- CMake target: `privilege_broker`
+- Dynamic exports: exactly eight:
+  - `nacl_privilege_backend_available`
+  - `nacl_privilege_backend_name`
+  - `nacl_privilege_broker_dispatch`
+  - `nacl_privilege_broker_get_backend`
+  - `nacl_privilege_broker_is_uid2000`
+  - `nacl_privilege_broker_ping`
+  - `nacl_privilege_capability_name`
+  - `nacl_privilege_capability_supported`
+- ELF NEEDED: `liblog.so`, `libm.so`, `libdl.so`, `libc.so`
+- SONAME: `libprivilege_broker.so`
+- No RPATH/RUNPATH.
+- No NACL-internal DT_NEEDED dependency.
+
+**VERIFIED:** The client uses a Unix stream socket at `/data/local/tmp/sdk/sockets/privilege.sock`, with bounded binary protocol messages and full read/write loops.
+
+**VERIFIED:** The daemon refuses startup unless effective UID is 2000 and independently checks that identity before dispatch. The broker currently supports only Bluetooth scan and Wi-Fi scan capability dispatch, and dispatch requires backend UID2000 and protocol version 1.
+
+**INFERENCE:** Loading the shared library does not activate the privileged broker. The daemon, socket accessibility, UID/security policy, protocol compatibility, and downstream services are separate runtime requirements. Native code does not grant UID 2000.
+
+**VERIFIED:** Eight exported functions are C-ABI candidates. The protocol has a version field, but the public structs do not have a general size/version mechanism.
+
+**UNKNOWN:** Actual Android/SELinux deployment permissions and daemon startup mechanism remain environment/deployment dependent.
+
+Research record:
+- `research/privilege-broker-resolver.md`
+
+**Native implementation changes remain unauthorized.**
+
+### Current position
+
+**PHASE C — `privilege_broker`: COMPLETE.**
+
+**Next:** `usb_subsystem`.
+
+Do not repeat prior completed resolver slices unless contradictory evidence appears.
