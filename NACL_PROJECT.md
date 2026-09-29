@@ -1248,3 +1248,35 @@ Evidence:
 **Next:** IPC Crypto provider/dependency compatibility analysis, then continue to the next simple client library in the persisted sequence.
 
 Do not repeat Bluetooth, Sensors, or Telephony evidence unless contradictory new evidence appears.
+
+
+### 36. IPC Crypto Provider Compatibility Checkpoint — 2026-09-29
+
+**VERIFIED:** IPC Crypto provider/dependency review is complete to the level supported by current repository evidence.
+
+Current source resolves eleven external crypto-provider symbols dynamically and attempts `libcrypto.so`, then `/system/lib64/libcrypto.so`, then `/system/lib/libcrypto.so`.
+
+**UNKNOWN:** The repository does not establish that these provider paths/names and all eleven symbols are available and ABI-compatible across supported Android/vendor environments. No provider compatibility matrix or bundled compatibility backend currently establishes that assumption.
+
+**VERIFIED:** Provider load/symbol failures return errors from `ipc_crypto_init()`, but the current public interface does not distinguish missing provider, inaccessible provider, incompatible provider, and missing individual symbol as separate capability-status classes.
+
+**VERIFIED:** `libipc_crypto.so` has no `libcrypto.so` DT_NEEDED dependency; the provider is runtime-loaded.
+
+**VERIFIED:** `docs/subsystem-crypto.md` contains a stale copied source fragment (`EVP_EVP_EncryptUpdate`) that disagrees with current `sdk/src/ipc_crypto.c`. Repository source/build evidence remains authoritative.
+
+**VERIFIED:** `ipc_secure_send()` performs single `send()` operations and therefore does not implement a complete-write loop for stream sockets. This is a future implementation issue, not changed during research.
+
+**INFERENCE:** The eventual capability architecture should keep provider/backend selection and compatibility separate from generic module loading and from crypto-session/socket activation.
+
+Research record:
+- `research/ipc-crypto-resolver.md` updated with the provider compatibility findings.
+
+**Native implementation changes remain unauthorized.**
+
+### Current position
+
+**PHASE C — IPC Crypto: COMPLETE.**
+
+**Next:** PHASE C simple client sequence continues with `adb_client`, then `privilege_broker`, `usb_subsystem`, `nfc_subsystem`, `nacl_location`, `power_battery`, and `nacl_storage`.
+
+Do not repeat IPC Crypto ELF/provider evidence unless contradictory new evidence appears.
