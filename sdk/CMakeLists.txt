@@ -102,7 +102,7 @@ add_library(privilege_broker SHARED src/privilege_broker.c)
 target_link_libraries(privilege_broker ${log-lib})
 
 add_executable(privilege_broker_daemon src/privilege_broker_daemon.c)
-target_link_libraries(privilege_broker_daemon ${log-lib})
+target_link_libraries(privilege_broker_daemon ${log-lib} privilege_broker)
 
 add_library(routing_core SHARED src/routing_core.c)
 target_link_libraries(routing_core ${log-lib} ${dl-lib})
