@@ -254,9 +254,9 @@ public:
 
     bool init_daemon() {
 
-        if (mkdir("/data/local/tmp/sdk", 0660) == -1 && errno != EEXIST) return false;
+        if (mkdir("/data/local/tmp/sdk", 0770) == -1 && errno != EEXIST) return false;
 
-        if (mkdir("/data/local/tmp/sdk/sockets", 0660) == -1 && errno != EEXIST) return false;
+        if (mkdir("/data/local/tmp/sdk/sockets", 0770) == -1 && errno != EEXIST) return false;
 
 
 
