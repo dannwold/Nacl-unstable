@@ -1135,3 +1135,34 @@ Research/documentation updates are authorized for continuity. Implementation may
 ### Immediate next action
 
 **Continue at PHASE A: Sensors.** Do not return to Bluetooth, general ELF export discovery, or repository-wide inventory unless new contradictory evidence requires reopening them.
+
+
+## 33. Sensors Resolver Slice Completed — 2026-09-29
+
+**VERIFIED:** Sensors PHASE A is complete.
+
+Current evidence:
+- CMake owner: `sensors_client` from `sdk/src/sensors_client.c`
+- Runtime artifact: `libsensors_client.so`
+- CI artifact: Run #53 / ID `36598137213`, arm64-v8a artifact ID `11046608330`
+- Dynamic exports: exactly `start_sensor_stream` and `stop_sensor_stream`
+- ELF NEEDED: `liblog.so`, `libm.so`, `libdl.so`, `libc.so`
+- No NACL-internal ELF NEEDED dependency
+- Activation: Unix socket request to `/data/local/tmp/sdk/sockets/sensors.sock`; daemon then activates the Android accelerometer stream
+- Client lifetime: socket + pthread + callback + session allocation
+- Sensor daemon/IPC availability and security remain runtime-dependent/UNKNOWN where not directly verified
+
+Research record:
+- `research/sensors-resolver.md` updated with the complete evidence set.
+
+**INFERENCE:** Sensors can use the generic module/symbol resolver for its two client exports, but capability activation/session lifetime requires a higher-level sensor-specific adapter.
+
+**Native implementation changes remain unauthorized.**
+
+### Current position
+
+**PHASE A — Sensors: COMPLETE.**
+
+**Next: PHASE B — Telephony.**
+
+Do not repeat Sensors or Bluetooth evidence unless contradictory new evidence appears.
